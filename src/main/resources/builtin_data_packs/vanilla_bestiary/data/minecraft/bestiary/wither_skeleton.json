@@ -1,0 +1,247 @@
+{
+  "classification": "elite",
+  "milestones": [
+    {
+      "kills": 1,
+      "name": true,
+      "model": true,
+      "type": {
+        "translate": "type.beasts_and_bounties.undead"
+      }
+    },
+    {
+      "kills": 3,
+      "description": {
+        "translate": "bestiary.beasts_and_bounties.wither_skeleton.description"
+      },
+      "stats": {
+        "health": "medium",
+        "damage": "high",
+        "speed": "medium"
+      },
+      "attack_patterns": [
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.attack_patterns.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.attack_patterns.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.attack_patterns.2"
+        }
+      ]
+    },
+    {
+      "kills": 5,
+      "habitat": [
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.habitat.0"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 8,
+      "strengths": [
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.strengths.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.strengths.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.03
+        }
+      ]
+    },
+    {
+      "kills": 12,
+      "weaknesses": [
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.weaknesses.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.weaknesses.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.03
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 18,
+      "notes": [
+        {
+          "translate": "bestiary.beasts_and_bounties.wither_skeleton.notes.0"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.03
+        }
+      ]
+    },
+    {
+      "kills": 25,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.03
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 35,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.03
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 45,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.03
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 60,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.03
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 75,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.03
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 90,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.03
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 110,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.03
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 150,
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.armor_toughness",
+          "amount": 0.5,
+          "operation": "add_value"
+        }
+      ]
+    }
+  ]
+}

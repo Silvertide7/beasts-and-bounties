@@ -1,0 +1,261 @@
+{
+  "milestones": [
+    {
+      "kills": 1
+    },
+    {
+      "kills": 2,
+      "name": true,
+      "model": true,
+      "type": {
+        "translate": "type.beasts_and_bounties.end"
+      }
+    },
+    {
+      "kills": 5,
+      "description": {
+        "translate": "bestiary.beasts_and_bounties.enderman.description"
+      },
+      "stats": {
+        "health": "high",
+        "damage": "high",
+        "speed": "high"
+      },
+      "attack_patterns": [
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.attack_patterns.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.attack_patterns.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.attack_patterns.2"
+        }
+      ]
+    },
+    {
+      "kills": 10,
+      "habitat": [
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.habitat.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.habitat.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.habitat.2"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 15,
+      "strengths": [
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.strengths.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.strengths.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        }
+      ]
+    },
+    {
+      "kills": 25,
+      "weaknesses": [
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.weaknesses.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.weaknesses.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.weaknesses.2"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 40,
+      "notes": [
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.notes.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.enderman.notes.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        }
+      ]
+    },
+    {
+      "kills": 60,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 80,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 100,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 125,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 150,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 175,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 200,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 250,
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:player.block_interaction_range",
+          "amount": 0.1,
+          "operation": "add_value"
+        }
+      ]
+    }
+  ]
+}

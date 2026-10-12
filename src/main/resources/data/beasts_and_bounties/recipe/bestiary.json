@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:book" },
+    { "item": "minecraft:bone" }
+  ],
+  "result": {
+    "id": "beasts_and_bounties:bestiary",
+    "count": 1
+  }
+}

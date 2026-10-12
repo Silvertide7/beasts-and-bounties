@@ -1,0 +1,214 @@
+{
+  "milestones": [
+    {
+      "kills": 1
+    },
+    {
+      "kills": 2,
+      "name": true,
+      "model": true,
+      "type": {
+        "translate": "type.beasts_and_bounties.aquatic"
+      }
+    },
+    {
+      "kills": 5,
+      "description": {
+        "translate": "bestiary.beasts_and_bounties.salmon.description"
+      },
+      "stats": {
+        "health": "low",
+        "speed": "medium"
+      }
+    },
+    {
+      "kills": 10,
+      "habitat": [
+        {
+          "translate": "bestiary.beasts_and_bounties.salmon.habitat.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.salmon.habitat.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 15,
+      "strengths": [
+        {
+          "translate": "bestiary.beasts_and_bounties.salmon.strengths.0"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        }
+      ]
+    },
+    {
+      "kills": 25,
+      "weaknesses": [
+        {
+          "translate": "bestiary.beasts_and_bounties.salmon.weaknesses.0"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 40,
+      "notes": [
+        {
+          "translate": "bestiary.beasts_and_bounties.salmon.notes.0"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        }
+      ]
+    },
+    {
+      "kills": 60,
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 80,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 100,
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 125,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 150,
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 175,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 200,
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 250,
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.water_movement_efficiency",
+          "amount": 0.02,
+          "operation": "add_value"
+        }
+      ]
+    }
+  ]
+}

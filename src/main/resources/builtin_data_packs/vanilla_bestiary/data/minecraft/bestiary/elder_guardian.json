@@ -1,0 +1,222 @@
+{
+  "classification": "minor_boss",
+  "milestones": [
+    {
+      "kills": 1,
+      "name": true,
+      "model": true,
+      "type": {
+        "translate": "type.beasts_and_bounties.aquatic"
+      },
+      "description": {
+        "translate": "bestiary.beasts_and_bounties.elder_guardian.description"
+      },
+      "stats": {
+        "health": "high",
+        "damage": "high",
+        "speed": "low"
+      },
+      "attack_patterns": [
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.attack_patterns.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.attack_patterns.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.2
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 2,
+      "habitat": [
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.habitat.0"
+        }
+      ],
+      "strengths": [
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.strengths.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.strengths.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.strengths.2"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.025
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 3,
+      "weaknesses": [
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.weaknesses.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.weaknesses.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.weaknesses.2"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.025
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 4,
+      "notes": [
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.notes.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.elder_guardian.notes.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.025
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 5,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.025
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.armor",
+          "amount": 1.0,
+          "operation": "add_value"
+        }
+      ]
+    },
+    {
+      "kills": 6,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.025
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 7,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.025
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 8,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.025
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 10,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.025
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.armor",
+          "amount": 1.0,
+          "operation": "add_value"
+        }
+      ]
+    }
+  ]
+}

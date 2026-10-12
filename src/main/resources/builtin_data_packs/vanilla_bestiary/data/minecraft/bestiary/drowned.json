@@ -1,0 +1,262 @@
+{
+  "milestones": [
+    {
+      "kills": 1
+    },
+    {
+      "kills": 2,
+      "name": true,
+      "model": true,
+      "type": {
+        "translate": "type.beasts_and_bounties.undead"
+      }
+    },
+    {
+      "kills": 5,
+      "description": {
+        "translate": "bestiary.beasts_and_bounties.drowned.description"
+      },
+      "stats": {
+        "health": "medium",
+        "damage": "low",
+        "speed": "low",
+        "armor": "low"
+      },
+      "attack_patterns": [
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.attack_patterns.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.attack_patterns.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.attack_patterns.2"
+        }
+      ]
+    },
+    {
+      "kills": 10,
+      "habitat": [
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.habitat.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.habitat.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.habitat.2"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 15,
+      "strengths": [
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.strengths.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.strengths.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.strengths.2"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        }
+      ]
+    },
+    {
+      "kills": 25,
+      "weaknesses": [
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.weaknesses.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.weaknesses.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 40,
+      "notes": [
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.notes.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.drowned.notes.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        }
+      ]
+    },
+    {
+      "kills": 60,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 80,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 100,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 125,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 150,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 175,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 200,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.02
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 250,
+      "rewards": [
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.water_movement_efficiency",
+          "amount": 0.02,
+          "operation": "add_value"
+        }
+      ]
+    }
+  ]
+}

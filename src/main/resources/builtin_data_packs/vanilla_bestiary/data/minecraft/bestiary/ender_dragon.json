@@ -1,0 +1,173 @@
+{
+  "classification": "major_boss",
+  "milestones": [
+    {
+      "kills": 1,
+      "name": true,
+      "model": true,
+      "type": {
+        "translate": "type.beasts_and_bounties.end"
+      },
+      "description": {
+        "translate": "bestiary.beasts_and_bounties.ender_dragon.description"
+      },
+      "stats": {
+        "health": "extreme",
+        "damage": "high",
+        "speed": "extreme"
+      },
+      "attack_patterns": [
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.attack_patterns.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.attack_patterns.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.attack_patterns.2"
+        }
+      ],
+      "habitat": [
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.habitat.0"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.2
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 2,
+      "strengths": [
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.strengths.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.strengths.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.strengths.2"
+        }
+      ],
+      "weaknesses": [
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.weaknesses.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.weaknesses.1"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.weaknesses.2"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.2
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 3,
+      "notes": [
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.notes.0"
+        },
+        {
+          "translate": "bestiary.beasts_and_bounties.ender_dragon.notes.1"
+        }
+      ],
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.05
+        },
+        {
+          "type": "damage_resistance",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.2
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.movement_speed",
+          "amount": 0.02,
+          "operation": "add_multiplied_base"
+        }
+      ]
+    },
+    {
+      "kills": 4,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.05
+        },
+        {
+          "type": "damage_resistance",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.2
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 5,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.05
+        },
+        {
+          "type": "damage_resistance",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.2
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.movement_speed",
+          "amount": 0.02,
+          "operation": "add_multiplied_base"
+        }
+      ]
+    }
+  ]
+}
