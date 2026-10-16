@@ -36,10 +36,10 @@ final class TrackingHud {
     private static final int HEIGHT_MARKER_HEIGHT = 5;
     private static final int HEIGHT_MARKER_GAP = 2;
 
-    private static final int STATUS_OFFSET_FROM_BOTTOM = 84;
+    private static final int STATUS_OFFSET_FROM_BOTTOM = 108;
+    private static final int PING_GAP_BELOW_STATUS = 16;
     static final int PING_MAX_WIDTH = 280;
     static final int PING_MARGIN = 20;
-    private static final int PING_BOTTOM_OFFSET = 100;
     private static final int PING_LINE_HEIGHT = 10;
     private static final int PING_COLOR = 0xE6D3A3;
     private static final long PING_FADE_MILLIS = 2000L;
@@ -90,7 +90,7 @@ final class TrackingHud {
         long holdMillis = Math.round(TrackingClientConfig.PING_TEXT_SECONDS.get() * 1000);
         int alpha = fadingAlpha(ClientTracking.millisSincePing(), holdMillis, PING_FADE_MILLIS);
         if (alpha < MIN_VISIBLE_ALPHA) return;
-        int top = graphics.guiHeight() - PING_BOTTOM_OFFSET - lines.size() * PING_LINE_HEIGHT;
+        int top = statusY(graphics) + PING_GAP_BELOW_STATUS;
         for (int i = 0; i < lines.size(); i++) {
             FormattedCharSequence line = lines.get(i);
             graphics.drawString(minecraft.font, line, (graphics.guiWidth() - minecraft.font.width(line)) / 2, top + i * PING_LINE_HEIGHT, (alpha << 24) | PING_COLOR, true);

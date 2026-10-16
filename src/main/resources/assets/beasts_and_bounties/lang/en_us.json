@@ -678,9 +678,7 @@
   "subtitles.beasts_and_bounties.bounty_claimed": "Bounty claimed",
   "commands.beasts_and_bounties.board.rerolled": "Rerolled the bounty board for %s player(s)",
   "commands.beasts_and_bounties.board.cleared": "Cleared the active bounty and cooldown for %s player(s)",
-  "gui.beasts_and_bounties.board.wanted": "WANTED",
   "gui.beasts_and_bounties.board.progress": "%s of %s slain",
   "gui.beasts_and_bounties.board.active_hint": "Finish this hunt before taking another.",
-  "gui.beasts_and_bounties.board.habitat": "Last seen:",
-  "gui.beasts_and_bounties.board.reward": "Reward:"
+  "gui.beasts_and_bounties.board.habitat": "Last seen:"
 }

@@ -378,8 +378,8 @@ There is no attachment sync on NeoForge 21.1, so it is done by hand:
       per attribute and operation, in vanilla attribute wording ("+0.5 Max Health").
     A section with nothing earned is left out.
 
-  Tabs with nothing revealed are hidden. The selected tab stays the same when you switch entries,
-  falling back to Overview if that tab is hidden. Each page turns with its own `page_backward` /
+  Tabs with nothing revealed are hidden. Clicking a different creature in the list returns to Overview (the
+  model tab); refreshes and reopening keep the current tab, falling back to Overview if it is hidden. Each page turns with its own `page_backward` /
   `page_forward` arrows at the bottom (shown only when there is a previous / next page, with a
   "1 / 3" page number between them and the vanilla page-turn sound). The left page pages the
   creature list (11 rows a page), the right page pages the selected tab's text. There is no mouse
@@ -479,7 +479,7 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   an arrow at the bottom means "behind", not "below". The compass shows for the whole hunt whenever
   there is a target, glow or no glow: a glowing creature straight below you or just past a wall
   edge is easy to miss, and hiding the arrow made A2/A3 feel like a downgrade from A1. The glow is
-  purely additive. The hunt timer (icon + seconds) sits **above the hotbar**, the
+  purely additive. The hunt timer (hourglass icon + seconds) sits **above the hotbar**, above the ping text, the
   one slot for tracking status, so the crosshair area holds only the compass.
 
   | Level | Duration / cooldown | Arrow range | Glow |
@@ -495,8 +495,9 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
 - **Transient text.** One-line messages (hold refusals, the server's fallback messages) use the
   action bar (`Gui.setOverlayMessage`). **Pings are drawn by the HUD itself**, because the action
   bar neither wraps nor stays longer than 3 s: the ping is wrapped once on receive
-  (`ClientTracking.receivePing`, width min(280, screen − 40)), drawn centred and bottom-anchored
-  100 px above the bottom (so it grows upward and never collides with the status slot at 84), held
+  (`ClientTracking.receivePing`, width min(280, screen − 40)), drawn centred and hanging **below the
+  status slot** (the hourglass hunt timer / hold bar, 108 px above the bottom): its first line
+  starts 16 px under that slot and further lines grow downward toward the action bar, held
   readable for `pingTextSeconds` (client config, default 4 s) and then faded over 2 s. Switching or
   stopping tracking drops the ping and stops the wisp.
 - **Config** (all tables above are the defaults):
@@ -621,6 +622,10 @@ There is no datagen and no `data` run config.
   Minecraft font is a bitmap, so any other scale blurs it. Body lines wrap at `width / scale`, and
   the lines per page divide by the scale, so more of a description fits on one page. The scale is
   computed in `init()` via `GuiText.pixelSnappedBodyScale()`, shared with the bounty board.
+- `GuiGraphics.blitSprite` / `blit` **do not enable blending**; vanilla widgets call
+  `RenderSystem.enableBlend()` themselves. Any sprite with soft or faint edges (the bounty cards,
+  the accept/abandon text, the tooltip) must be drawn between `enableBlend()` + `defaultBlendFunc()`
+  and `disableBlend()`, or its near-transparent edge pixels draw at full strength as stray colours.
 - Text on the parchment is drawn **without a drop shadow** (`drawString(..., false)`). Vanilla widgets
   default to a shadow, which smears dark text; `EditBox` needs `setTextShadow(false)`.
 - **Never use Minecraft's advancement system** (no advancements, criteria or triggers). Milestones
@@ -678,10 +683,10 @@ board is only where you look. One bounty is active at a time.
   and the screen draws nothing outside it (no drawn title: the texture owns the frame). Postings
   are **"WANTED" posters** on the hand-painted `bounty_card` (88×101, edge to edge): three fit
   across with 13 px margins and 12 px gaps, which is why `offersShown` is capped at 3. Each holds,
-  top to bottom at fixed offsets, the WANTED heading (dark red, 8 px from the top), the creature's
+  top to bottom at fixed offsets, the hand-painted `wanted_text` heading (57×16, drawn 43×12, 7 px from the top), the creature's
   model (28 px box at 20, scissored to that box in screen space, transformed by the hover scale,
   so tall mobs never reach the heading), then at body-text scale the name (one line, upper case),
-  "Slay N", and one reward line: "Reward:", the item icons at 0.625 scale (`renderItem`, the
+  "Slay N", and one reward line: the hand-painted `reward_text` label (58×16, drawn 36×10), the item icons at 0.625 scale (`renderItem`, the
   items themselves) and "+N XP". The bottom of the paper is left for the hover-only button. Hovering a poster swaps in `bounty_card_highlighted`, scales it
   up 10% about its centre and pushes its drop shadow from 2 px to 4 px (the shadow is the paper's own silhouette, drawn black and offset down-right, so the ragged edge casts a matching shadow) and only
   then shows its Accept action: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 5/8 size (55×10) and centred; the drawn sprite is the click area. The active poster uses `abandon_text` (92×16, drawn 58×10) the same way.
@@ -692,7 +697,7 @@ board is only where you look. One bounty is active at a time.
   `SepiaBufferSource`**, a `VertexConsumer` wrapper that multiplies every vertex colour, because
   `RenderSystem.setShaderColor` does not reach entity rendering here; the render is a copy of
   `renderEntityInInventory` with that buffer source. With a bounty active the postings are replaced
-  by one poster for the target with "2 of 5 slain" and an Abandon button, footer "Finish this hunt
+  by one poster for the target with "2 of 5 slain", its reward line and an Abandon button (with a bounty active the server sends that bounty's own definition as the only offer, since it is usually not in the current period's postings), footer "Finish this hunt
   before taking another." On cooldown (after completing or abandoning) the board is **empty** and
   the footer says how long; otherwise "New postings in N min". Accept/Abandon send their payload
   and close.

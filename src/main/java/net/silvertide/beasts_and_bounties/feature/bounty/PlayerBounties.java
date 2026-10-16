@@ -46,11 +46,21 @@ public final class PlayerBounties {
 
     static void openBoard(ServerPlayer player) {
         long now = player.level().getGameTime();
-        List<BountyPayloads.Offer> offers = BountyOffers.forPlayer(player, now).stream()
+        BountyState state = state(player);
+        List<BountyOffers.Offer> shown = state.active()
+                .map(bounty -> Optional.ofNullable(BountyDefinitions.all().get(bounty.entityId()))
+                        .map(definition -> List.of(new BountyOffers.Offer(bounty.entityId(), definition))).orElse(List.of()))
+                .orElseGet(() -> BountyOffers.forPlayer(player, now));
+        List<BountyPayloads.Offer> offers = shown.stream()
                 .map(offer -> new BountyPayloads.Offer(offer.entityId(), offer.definition().kills(), offer.definition().itemRewards(),
-                        offer.definition().experienceReward(), BountyConfig.showLastSeen() ? BestiaryEntries.get(offer.entityId()).fullKnowledge().habitat() : List.of()))
+                        offer.definition().experienceReward(), lastSeen(offer.entityId())))
                 .toList();
-        Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state(player)));
+        Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state));
+    }
+
+    private static List<Component> lastSeen(ResourceLocation entityId) {
+        BestiaryEntry entry = BestiaryEntries.get(entityId);
+        return BountyConfig.showLastSeen() && entry != null ? entry.fullKnowledge().habitat() : List.of();
     }
 
     static void accept(ServerPlayer player, ResourceLocation entityId) {

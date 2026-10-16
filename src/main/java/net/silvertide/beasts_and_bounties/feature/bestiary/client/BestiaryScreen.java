@@ -639,6 +639,7 @@ public final class BestiaryScreen extends Screen {
         }
         Row row = rowAt(mouseX, mouseY);
         if (row != null) {
+            if (selectedRow == null || !row.entityId().equals(selectedRow.entityId())) selectedTab = Tab.OVERVIEW;
             select(row);
             return true;
         }

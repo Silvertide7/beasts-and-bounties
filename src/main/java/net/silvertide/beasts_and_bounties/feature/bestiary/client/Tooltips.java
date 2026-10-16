@@ -1,5 +1,6 @@
 package net.silvertide.beasts_and_bounties.feature.bestiary.client;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -26,7 +27,10 @@ public final class Tooltips {
         int textY = mouseY - CURSOR_OFFSET;
         graphics.pose().pushPose();
         graphics.pose().translate(0, 0, Z);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         graphics.blitSprite(SPRITE, textX - PADDING, textY - PADDING, width + PADDING * 2, height + PADDING * 2);
+        RenderSystem.disableBlend();
         for (int i = 0; i < lines.size(); i++) graphics.drawString(font, lines.get(i), textX, textY + i * LINE_HEIGHT, TEXT_COLOR, true);
         graphics.pose().popPose();
     }

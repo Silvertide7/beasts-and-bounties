@@ -35,6 +35,8 @@ import java.util.Optional;
 final class BountyBoardScreen extends Screen {
     private static final ResourceLocation BOARD_TEXTURE = BeastsAndBountiesMod.id("textures/gui/bounty_board.png");
     private static final ResourceLocation CARD_SPRITE = BeastsAndBountiesMod.id("bestiary/bounty_card");
+    private static final ResourceLocation WANTED_SPRITE = BeastsAndBountiesMod.id("bestiary/wanted_text");
+    private static final ResourceLocation REWARD_SPRITE = BeastsAndBountiesMod.id("bestiary/reward_text");
     private static final ResourceLocation HOVERED_CARD_SPRITE = BeastsAndBountiesMod.id("bestiary/bounty_card_highlighted");
 
     private static final int BOARD_WIDTH = 352;
@@ -47,7 +49,10 @@ final class BountyBoardScreen extends Screen {
     private static final int CARD_HEIGHT = 101;
     private static final int CARD_GAP = 12;
     private static final int CARD_PADDING = 3;
-    private static final int HEADING_Y = 8;
+    private static final int HEADING_Y = 7;
+    private static final int WANTED_DRAWN_WIDTH = 43;
+    private static final int WANTED_DRAWN_HEIGHT = 12;
+    private static final int REWARD_LABEL_DRAWN_WIDTH = 36;
     private static final int MODEL_BOX_TOP = 20;
     private static final int MODEL_BOX_HEIGHT = 28;
     private static final int NAME_Y = 49;
@@ -145,7 +150,7 @@ final class BountyBoardScreen extends Screen {
         for (Poster poster : posters) {
             Component task = active.map(bounty -> Component.translatable("gui.beasts_and_bounties.board.progress", bounty.killsSoFar(), bounty.killsRequired()).withStyle(ChatFormatting.DARK_RED))
                     .orElseGet(() -> offerOf(poster).map(offer -> Component.translatable("gui.beasts_and_bounties.board.kills", offer.kills())).orElse(Component.empty()));
-            renderPoster(graphics, poster, task, active.isEmpty() ? offerOf(poster).orElse(null) : null, mouseX, mouseY);
+            renderPoster(graphics, poster, task, offerOf(poster).orElse(null), mouseX, mouseY);
         }
         Component footer = active.isPresent() ? Component.translatable("gui.beasts_and_bounties.board.active_hint")
                 : state.canAccept(now) ? Component.translatable("gui.beasts_and_bounties.board.refresh", duration(Math.max(0, board.periodEndsAt() - now)))
@@ -171,13 +176,16 @@ final class BountyBoardScreen extends Screen {
             graphics.pose().scale(HOVERED_SCALE, HOVERED_SCALE, 1f);
             graphics.pose().translate(-poster.centerX(), -(y + CARD_HEIGHT / 2f), 0);
         }
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(0f, 0f, 0f, SHADOW_ALPHA);
         ResourceLocation cardSprite = hovered ? HOVERED_CARD_SPRITE : CARD_SPRITE;
         int shadowOffset = hovered ? HOVERED_SHADOW_OFFSET : SHADOW_OFFSET;
         graphics.blitSprite(cardSprite, x + shadowOffset, y + shadowOffset, CARD_WIDTH, CARD_HEIGHT);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         graphics.blitSprite(cardSprite, x, y, CARD_WIDTH, CARD_HEIGHT);
-        drawCentered(graphics, Component.translatable("gui.beasts_and_bounties.board.wanted").withStyle(ChatFormatting.BOLD), poster.centerX(), y + HEADING_Y, ChatFormatting.DARK_RED.getColor(), false);
+        RenderSystem.disableBlend();
+        blitBlended(graphics, WANTED_SPRITE, poster.centerX() - WANTED_DRAWN_WIDTH / 2, y + HEADING_Y, WANTED_DRAWN_WIDTH, WANTED_DRAWN_HEIGHT);
         renderModel(graphics, poster, y + MODEL_BOX_TOP);
         drawScaled(graphics, poster.nameLine(), poster.centerX() - font.width(poster.nameLine()) * bodyScale / 2, y + NAME_Y, TEXT_COLOR);
         drawCenteredScaled(graphics, task, poster.centerX(), y + TASK_Y, TEXT_COLOR);
@@ -186,20 +194,19 @@ final class BountyBoardScreen extends Screen {
         PosterButton button = posterButton();
         if (hovered && button != null) {
             ResourceLocation sprite = isOverButton(mouseX, mouseY, poster) ? button.highlightedSprite : button.sprite;
-            graphics.blitSprite(sprite, buttonX(poster, button), buttonY(), button.width, BUTTON_HEIGHT);
+            blitBlended(graphics, sprite, buttonX(poster, button), buttonY(), button.width, BUTTON_HEIGHT);
         }
     }
 
     private void renderRewards(GuiGraphics graphics, Poster poster, BountyPayloads.Offer offer, int y) {
-        Component label = Component.translatable("gui.beasts_and_bounties.board.reward");
         Component experience = Component.translatable("gui.beasts_and_bounties.board.experience", offer.experience());
         float iconSize = REWARD_ICON_SIZE * REWARD_ICON_SCALE;
         float textY = y + (iconSize - GLYPH_HEIGHT * bodyScale) / 2;
-        float totalWidth = font.width(label) * bodyScale + REWARD_GAP + offer.items().size() * iconSize
+        float totalWidth = REWARD_LABEL_DRAWN_WIDTH + REWARD_GAP + offer.items().size() * iconSize
                 + (offer.experience() > 0 ? REWARD_GAP + font.width(experience) * bodyScale : 0);
         float rowX = poster.centerX() - totalWidth / 2;
-        drawScaled(graphics, label.getVisualOrderText(), rowX, textY, TEXT_COLOR);
-        rowX += font.width(label) * bodyScale + REWARD_GAP;
+        blitBlended(graphics, REWARD_SPRITE, Math.round(rowX), y, REWARD_LABEL_DRAWN_WIDTH, Math.round(iconSize));
+        rowX += REWARD_LABEL_DRAWN_WIDTH + REWARD_GAP;
         for (ItemStack stack : offer.items()) {
             graphics.pose().pushPose();
             graphics.pose().translate(rowX, y, 0);
@@ -210,6 +217,13 @@ final class BountyBoardScreen extends Screen {
             rowX += iconSize;
         }
         if (offer.experience() > 0) drawScaled(graphics, experience.getVisualOrderText(), rowX + REWARD_GAP, textY, ChatFormatting.DARK_GREEN.getColor());
+    }
+
+    private static void blitBlended(GuiGraphics graphics, ResourceLocation sprite, int x, int y, int width, int height) {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        graphics.blitSprite(sprite, x, y, width, height);
+        RenderSystem.disableBlend();
     }
 
     private void drawScaled(GuiGraphics graphics, FormattedCharSequence text, float x, float y, int color) {
