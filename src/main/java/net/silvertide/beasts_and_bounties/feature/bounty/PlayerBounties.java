@@ -48,7 +48,7 @@ public final class PlayerBounties {
         long now = player.level().getGameTime();
         List<BountyPayloads.Offer> offers = BountyOffers.forPlayer(player, now).stream()
                 .map(offer -> new BountyPayloads.Offer(offer.entityId(), offer.definition().kills(), offer.definition().itemRewards(),
-                        offer.definition().experienceReward(), BestiaryEntries.get(offer.entityId()).fullKnowledge().habitat()))
+                        offer.definition().experienceReward(), BountyConfig.showLastSeen() ? BestiaryEntries.get(offer.entityId()).fullKnowledge().habitat() : List.of()))
                 .toList();
         Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state(player)));
     }

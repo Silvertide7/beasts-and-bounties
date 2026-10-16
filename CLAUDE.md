@@ -671,18 +671,20 @@ board is only where you look. One bounty is active at a time.
   book**; the kill and the bonus kills do.
 - **Config** (`beasts_and_bounties-bounty-server.toml`): `refreshMinecraftDays` (1.0),
   `offersShown` (3, 1–3), `claimCooldownMinutes` (10), `abandonCooldownMinutes` (20),
-  `allowAbandon` (true). Per-creature numbers are data, never config.
+  `allowAbandon` (true), `showLastSeen` (false: when off the server sends no habitat, so the
+  posters have no "Last seen:" tooltip). Per-creature numbers are data, never config.
 - **Board screen** (`BountyBoardScreen`, opened by the `BoardOpened` handler): background
   `textures/gui/bounty_board.png` (352×188, hand-painted); its usable area is `(19, 21)` 314×145,
   and the screen draws nothing outside it (no drawn title: the texture owns the frame). Postings
   are **"WANTED" posters** on the hand-painted `bounty_card` (88×101, edge to edge): three fit
   across with 13 px margins and 12 px gaps, which is why `offersShown` is capped at 3. Each holds,
-  top to bottom at fixed offsets, the WANTED heading (dark red), the creature's model (28 px box),
-  the name (one line, upper case), "Slay N" at body-text scale, a "Reward" label and the reward
-  row at 0.75 scale (item icons via `renderItem`, the items themselves, with "+N XP" beside them).
-  The top 8 px of the paper stay clear. Hovering a poster scales it
-  up 10% about its centre over a 2 px drop shadow (the paper's own silhouette, drawn black and offset down-right, so the ragged edge casts a matching shadow) and only
-  then shows its Accept button (`bounty_button` copies of `track_button`, 42×14).
+  top to bottom at fixed offsets, the WANTED heading (dark red, 8 px from the top), the creature's
+  model (28 px box at 20, scissored to that box in screen space, transformed by the hover scale,
+  so tall mobs never reach the heading), then at body-text scale the name (one line, upper case),
+  "Slay N", and one reward line: "Reward:", the item icons at 0.625 scale (`renderItem`, the
+  items themselves) and "+N XP". The bottom of the paper is left for the hover-only button. Hovering a poster swaps in `bounty_card_highlighted`, scales it
+  up 10% about its centre and pushes its drop shadow from 2 px to 4 px (the shadow is the paper's own silhouette, drawn black and offset down-right, so the ragged edge casts a matching shadow) and only
+  then shows its Accept action: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 5/8 size (55×10) and centred; the drawn sprite is the click area. The active poster uses `abandon_text` (92×16, drawn 58×10) the same way.
   Hovering a poster shows the creature's **habitat lines from its entry's full knowledge** (a
   poster says where it was seen, whatever the player has unlocked) in a `Tooltips` tooltip headed
   "Last seen:"; there is no room on the paper. The model faces the viewer (yaw 180 + 25: in this

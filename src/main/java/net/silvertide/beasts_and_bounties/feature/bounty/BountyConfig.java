@@ -11,6 +11,7 @@ public final class BountyConfig {
     private static final ModConfigSpec.IntValue CLAIM_COOLDOWN_MINUTES;
     private static final ModConfigSpec.IntValue ABANDON_COOLDOWN_MINUTES;
     public static final ModConfigSpec.BooleanValue ALLOW_ABANDON;
+    private static final ModConfigSpec.BooleanValue SHOW_LAST_SEEN;
 
     private static final int TICKS_PER_MINECRAFT_DAY = 24000;
     private static final int SECONDS_PER_MINUTE = 60;
@@ -28,11 +29,17 @@ public final class BountyConfig {
                 .defineInRange("abandonCooldownMinutes", 20, 0, 1440);
         ALLOW_ABANDON = builder.comment("Whether a player may abandon an accepted bounty.")
                 .define("allowAbandon", true);
+        SHOW_LAST_SEEN = builder.comment("Whether hovering a posting shows where the creature was last seen (its habitat), even before the player has learned it.")
+                .define("showLastSeen", false);
         builder.pop();
         SPEC = builder.build();
     }
 
     private BountyConfig() {}
+
+    static boolean showLastSeen() {
+        return SHOW_LAST_SEEN.get();
+    }
 
     static long refreshTicks() {
         return Math.max(1, Math.round(REFRESH_MINECRAFT_DAYS.get() * TICKS_PER_MINECRAFT_DAY));
