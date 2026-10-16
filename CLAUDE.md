@@ -714,10 +714,16 @@ board is only where you look. One bounty is active at a time.
   it with the last sort), not on ordinary progress refreshes. The Tracking & Bounties tab shows
   "Bounty: 2 of 5 slain" for the active bounty's creature.
 - **Block**: model `block/bounty_board` is two authored elements, a 2×8 post and a 16×8 board on
-  top of it, textured with `block/bounty_board.png` (24×12, the front: the north face of the unrotated
-  model, which faces the placing player), `block/bounty_board_back.png` (24×12, the south face: the
-  same planks and frame with support battens and a post cleat instead of the paper) and
-  `block/bounty_board_post.png` (2×14); item texture copies `item/oak_sign`. It is placed
+  top of it, textured with four PNGs, each sized so the block atlas keeps its full mipmap level (a 24×12 or
+  2×14 texture cuts mipmapping for **every** block in the game, and the log warns "limits mip level"):
+  - `block/bounty_board.png` (front, north face of the unrotated model, facing the placing player)
+    and `block/bounty_board_back.png` (back, south face): 32×16 canvases with the 24×12 art in the
+    top-left corner and the rest transparent; the faces use uv `[0, 0, 12, 12]` (2 texels per u unit
+    on a 32-wide texture). Repaint only that 24×12 corner.
+  - `block/bounty_board_edge.png` (16×16, frame wood): the board's sides, top and bottom, and the
+    break particles.
+  - `block/bounty_board_post.png`: a 16×16 canvas with the 2×14 post art top-left, uv `[0, 0, 2, 14]`.
+  The item texture copies `item/oak_sign`. It is placed
   on the ground facing the player (four facings). Like vanilla's standing sign it is drawn at
   sign scale so the whole thing fits in one block: post 2×8, board 16×8 on top (y 8–16). The
   selection shape is post ∪ board, and **only a click on the board opens the menu**
