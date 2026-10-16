@@ -29,31 +29,33 @@ final class TrackingHud {
     private static final ResourceLocation BELOW_SPRITE = BeastsAndBountiesMod.id("bestiary/tracking_down");
     private static final ResourceLocation TIMER_SPRITE = BeastsAndBountiesMod.id("bestiary/tracking_timer");
 
-    private static final int RING_SIZE = 44;
-    private static final int RING_RADIUS = 20;
-    private static final int ARROW_SIZE = 16;
+    private static final int RING_SIZE = 30;
+    private static final int RING_RADIUS = 14;
+    private static final int ARROW_SIZE = 11;
     private static final int HEIGHT_MARKER_WIDTH = 7;
     private static final int HEIGHT_MARKER_HEIGHT = 5;
-    private static final int HEIGHT_MARKER_GAP = 2;
+    private static final int HEIGHT_MARKER_GAP = 1;
 
-    private static final int STATUS_OFFSET_FROM_BOTTOM = 108;
-    private static final int PING_GAP_BELOW_STATUS = 16;
+    private static final int STATUS_OFFSET_FROM_BOTTOM = 84;
+    private static final int HOTBAR_HEIGHT = 22;
+    private static final int HUNT_TIMER_GAP_ABOVE_RING = 3;
     static final int PING_MAX_WIDTH = 280;
     static final int PING_MARGIN = 20;
+    private static final int PING_BOTTOM_OFFSET = 100;
     private static final int PING_LINE_HEIGHT = 10;
-    private static final int PING_COLOR = 0xE6D3A3;
+    private static final int PING_COLOR = 0xFFAA00;
     private static final long PING_FADE_MILLIS = 2000L;
     private static final int MIN_VISIBLE_ALPHA = 8;
     private static final int OPAQUE = 255;
     private static final int TIMER_SIZE = 8;
     private static final int TIMER_GAP = 3;
     private static final int HUNT_TIMER_COLOR = 0x9CE07A;
-    private static final int HOLD_TEXT_COLOR = 0xE6D3A3;
+    private static final int HOLD_TEXT_COLOR = 0xFFAA00;
     private static final int HOLD_BAR_WIDTH = 60;
     private static final int HOLD_BAR_HEIGHT = 2;
     private static final int HOLD_BAR_GAP = 3;
     private static final int HOLD_BAR_BACKGROUND = 0x80000000;
-    private static final int HOLD_BAR_FILL = 0xFFE6D3A3;
+    private static final int HOLD_BAR_FILL = 0xFFFFAA00;
     private static final SecondsText timerText = new SecondsText("tracking.beasts_and_bounties.timer");
 
     private TrackingHud() {}
@@ -62,8 +64,9 @@ final class TrackingHud {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
         if (minecraft.options.hideGui || player == null || minecraft.level == null) return;
-        renderPing(graphics, minecraft);
         long now = minecraft.level.getGameTime();
+        boolean hunting = ClientTracking.state().filter(state -> state.isHunting(now)).isPresent();
+        if (!hunting) renderPing(graphics, minecraft);
         ClientTracking.state().filter(state -> state.isHunting(now)).ifPresent(state -> {
             renderHuntCompass(graphics, minecraft, player, deltaTracker.getGameTimeDeltaPartialTick(true));
             renderHuntTimer(graphics, minecraft, state.huntEndsAt() - now);
@@ -90,7 +93,7 @@ final class TrackingHud {
         long holdMillis = Math.round(TrackingClientConfig.PING_TEXT_SECONDS.get() * 1000);
         int alpha = fadingAlpha(ClientTracking.millisSincePing(), holdMillis, PING_FADE_MILLIS);
         if (alpha < MIN_VISIBLE_ALPHA) return;
-        int top = statusY(graphics) + PING_GAP_BELOW_STATUS;
+        int top = graphics.guiHeight() - PING_BOTTOM_OFFSET - lines.size() * PING_LINE_HEIGHT;
         for (int i = 0; i < lines.size(); i++) {
             FormattedCharSequence line = lines.get(i);
             graphics.drawString(minecraft.font, line, (graphics.guiWidth() - minecraft.font.width(line)) / 2, top + i * PING_LINE_HEIGHT, (alpha << 24) | PING_COLOR, true);
@@ -111,7 +114,7 @@ final class TrackingHud {
             float relativeYaw = Mth.wrapDegrees(TrackingDirection.yawTowards(playerPosition.x, playerPosition.z, targetPosition.x, targetPosition.z)
                     - player.getViewYRot(partialTick));
             int centerX = graphics.guiWidth() / 2;
-            int centerY = graphics.guiHeight() / 2;
+            int centerY = compassCenterY(graphics);
             graphics.blitSprite(RING_SPRITE, centerX - RING_SIZE / 2, centerY - RING_SIZE / 2, RING_SIZE, RING_SIZE);
 
             float bearing = relativeYaw * Mth.DEG_TO_RAD;
@@ -135,7 +138,7 @@ final class TrackingHud {
         Component seconds = timerText.textFor(Math.ceilDiv(ticksLeft, SharedConstants.TICKS_PER_SECOND));
         int width = TIMER_SIZE + TIMER_GAP + minecraft.font.width(seconds);
         int x = (graphics.guiWidth() - width) / 2;
-        int y = statusY(graphics);
+        int y = compassCenterY(graphics) - RING_SIZE / 2 - HUNT_TIMER_GAP_ABOVE_RING - TIMER_SIZE;
         graphics.blitSprite(TIMER_SPRITE, x, y, TIMER_SIZE, TIMER_SIZE);
         graphics.drawString(minecraft.font, seconds, x + TIMER_SIZE + TIMER_GAP, y, HUNT_TIMER_COLOR, true);
     }
@@ -151,6 +154,12 @@ final class TrackingHud {
         int barY = y + minecraft.font.lineHeight + HOLD_BAR_GAP;
         graphics.fill(barX, barY, barX + HOLD_BAR_WIDTH, barY + HOLD_BAR_HEIGHT, HOLD_BAR_BACKGROUND);
         graphics.fill(barX, barY, barX + Math.round(HOLD_BAR_WIDTH * ClientTracking.holdProgress()), barY + HOLD_BAR_HEIGHT, HOLD_BAR_FILL);
+    }
+
+    private static int compassCenterY(GuiGraphics graphics) {
+        int crosshairY = graphics.guiHeight() / 2;
+        int hotbarTop = graphics.guiHeight() - HOTBAR_HEIGHT;
+        return (crosshairY + hotbarTop) / 2;
     }
 
     private static int statusY(GuiGraphics graphics) {

@@ -2,6 +2,7 @@
   "textures": {
     "particle": "beasts_and_bounties:block/bounty_board",
     "board": "beasts_and_bounties:block/bounty_board",
+    "back": "beasts_and_bounties:block/bounty_board_back",
     "post": "beasts_and_bounties:block/bounty_board_post"
   },
   "elements": [
@@ -20,7 +21,7 @@
       "to": [16, 16, 9],
       "faces": {
         "north": { "uv": [0, 0, 16, 16], "texture": "#board" },
-        "south": { "uv": [0, 0, 16, 16], "texture": "#board" },
+        "south": { "uv": [0, 0, 16, 16], "texture": "#back" },
         "east": { "uv": [0, 0, 1, 16], "texture": "#board" },
         "west": { "uv": [0, 0, 1, 16], "texture": "#board" },
         "up": { "uv": [0, 0, 16, 1], "texture": "#board" },

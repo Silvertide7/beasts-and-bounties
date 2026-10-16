@@ -473,14 +473,18 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   for a duration and then a cooldown; a short, quiet sniff (`tracking.hunt_start`, the mod's own
   sound event delegating to vanilla's fox sniff at volume 0.4, `assets/.../sounds.json`) plays for
   that player when it starts.
-  While hunting, a faint **compass ring** (`tracking_ring`, 44×44) sits around the crosshair and
-  the arrow rides on the ring at the target's bearing (radius 20), rotated to match, with the
+  While hunting, a faint **compass ring** (`tracking_ring`, 44×44 PNG drawn at 30×30) sits
+  **halfway between the crosshair and the top of the hotbar** (`compassCenterY`), not on the
+  crosshair, so it never blocks the player's view. It can overlap the action bar text. The arrow
+  (16×16 PNG drawn at 11×11) rides on the ring at the target's bearing (radius 14), rotated to
+  match, with the
   up/down marker beside it when the target is more than 4 blocks off. This reads as a compass, so
   an arrow at the bottom means "behind", not "below". The compass shows for the whole hunt whenever
   there is a target, glow or no glow: a glowing creature straight below you or just past a wall
   edge is easy to miss, and hiding the arrow made A2/A3 feel like a downgrade from A1. The glow is
-  purely additive. The hunt timer (hourglass icon + seconds) sits **above the hotbar**, above the ping text, the
-  one slot for tracking status, so the crosshair area holds only the compass.
+  purely additive. The hourglass hunt timer (icon + seconds) sits 3 px above the ring. Outside a hunt the hold text and bar use the status
+  slot at 84. Passive ping text is hidden while hunting (the compass already points the way and the
+  ping's slot at 100 overlaps the compass); the wisp still shows. The crosshair area is left clear.
 
   | Level | Duration / cooldown | Arrow range | Glow |
   |---|---|---|---|
@@ -492,12 +496,13 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   `beasts_and_bounties.tracking.mixins.json`: `MinecraftMixin.shouldEntityAppearGlowing` turns it
   on, and `EntityMixin.getTeamColor` tints the outline blood-red (`ClientTracking.GLOW_COLOR`,
   `0xFF5A5A`) so it reads as the bestiary's and not a spectral arrow.
+- **HUD text colour.** The ping text, the hold text and the hold bar use vanilla gold (`0xFFAA00`) with a
+  drop shadow, not a pale parchment yellow, so they stay readable against snow, sand and bright sky.
 - **Transient text.** One-line messages (hold refusals, the server's fallback messages) use the
   action bar (`Gui.setOverlayMessage`). **Pings are drawn by the HUD itself**, because the action
   bar neither wraps nor stays longer than 3 s: the ping is wrapped once on receive
-  (`ClientTracking.receivePing`, width min(280, screen − 40)), drawn centred and hanging **below the
-  status slot** (the hourglass hunt timer / hold bar, 108 px above the bottom): its first line
-  starts 16 px under that slot and further lines grow downward toward the action bar, held
+  (`ClientTracking.receivePing`, width min(280, screen − 40)), drawn centred and bottom-anchored
+  100 px above the bottom (so it grows upward and never collides with the status slot at 84), held
   readable for `pingTextSeconds` (client config, default 4 s) and then faded over 2 s. Switching or
   stopping tracking drops the ping and stops the wisp.
 - **Config** (all tables above are the defaults):
@@ -709,8 +714,10 @@ board is only where you look. One bounty is active at a time.
   it with the last sort), not on ordinary progress refreshes. The Tracking & Bounties tab shows
   "Bounty: 2 of 5 slain" for the active bounty's creature.
 - **Block**: model `block/bounty_board` is two authored elements, a 2×8 post and a 16×8 board on
-  top of it, textured with crops of vanilla `entity/signs/oak.png` (`block/bounty_board.png`
-  24×12 and `block/bounty_board_post.png` 2×14); item texture copies `item/oak_sign`. It is placed
+  top of it, textured with `block/bounty_board.png` (24×12, the front: the north face of the unrotated
+  model, which faces the placing player), `block/bounty_board_back.png` (24×12, the south face: the
+  same planks and frame with support battens and a post cleat instead of the paper) and
+  `block/bounty_board_post.png` (2×14); item texture copies `item/oak_sign`. It is placed
   on the ground facing the player (four facings). Like vanilla's standing sign it is drawn at
   sign scale so the whole thing fits in one block: post 2×8, board 16×8 on top (y 8–16). The
   selection shape is post ∪ board, and **only a click on the board opens the menu**
