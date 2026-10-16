@@ -716,10 +716,13 @@ board is only where you look. One bounty is active at a time.
 - **Block**: model `block/bounty_board` is two authored elements, a 2×8 post and a 16×8 board on
   top of it, textured with four PNGs, each sized so the block atlas keeps its full mipmap level (a 24×12 or
   2×14 texture cuts mipmapping for **every** block in the game, and the log warns "limits mip level"):
-  - `block/bounty_board.png` (front, north face of the unrotated model, facing the placing player)
-    and `block/bounty_board_back.png` (back, south face): 32×16 canvases with the 24×12 art in the
-    top-left corner and the rest transparent; the faces use uv `[0, 0, 12, 12]` (2 texels per u unit
-    on a 32-wide texture). Repaint only that 24×12 corner.
+  - `block/bounty_board.png` (front, north face of the unrotated model, facing the placing player):
+    a 32×16 canvas with the 24×12 art in the top-left corner and the rest transparent; the face uses
+    uv `[0, 0, 12, 12]` (2 texels per u unit on a 32-wide texture). Repaint only that corner.
+  - `block/bounty_board_back.png` (back, south face): the user's hand-painted 24×12 file, mapped
+    whole with uv `[0, 0, 16, 16]`. **Don't edit or pad it**; it is the user's art. Its size limits
+    the block atlas mip level to 2 (a logged warning), which was accepted. If a face's uv and its
+    PNG's size disagree, the face shows a stretched crop: check both when a face looks off.
   - `block/bounty_board_edge.png` (16×16, frame wood): the board's sides, top and bottom, and the
     break particles.
   - `block/bounty_board_post.png`: a 16×16 canvas with the 2×14 post art top-left, uv `[0, 0, 2, 14]`.
