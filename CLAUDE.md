@@ -496,8 +496,9 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   `beasts_and_bounties.tracking.mixins.json`: `MinecraftMixin.shouldEntityAppearGlowing` turns it
   on, and `EntityMixin.getTeamColor` tints the outline blood-red (`ClientTracking.GLOW_COLOR`,
   `0xFF5A5A`) so it reads as the bestiary's and not a spectral arrow.
-- **HUD text colour.** The ping text, the hold text and the hold bar use vanilla gold (`0xFFAA00`) with a
-  drop shadow, not a pale parchment yellow, so they stay readable against snow, sand and bright sky.
+- **HUD text colour.** The ping text and the hold text ("Searching for the Skeleton's trail") are
+  black with **no drop shadow**, by the user's choice. The hold bar fill stays vanilla gold
+  (`0xFFAA00`) and the hunt timer keeps its green with a shadow.
 - **Transient text.** One-line messages (hold refusals, the server's fallback messages) use the
   action bar (`Gui.setOverlayMessage`). **Pings are drawn by the HUD itself**, because the action
   bar neither wraps nor stays longer than 3 s: the ping is wrapped once on receive
@@ -694,7 +695,7 @@ board is only where you look. One bounty is active at a time.
   "Slay N", and one reward line: the hand-painted `reward_text` label (58×16, drawn 36×10), the item icons at 0.625 scale (`renderItem`, the
   items themselves) and "+N XP". The bottom of the paper is left for the hover-only button. Hovering a poster swaps in `bounty_card_highlighted`, scales it
   up 10% about its centre and pushes its drop shadow from 2 px to 4 px (the shadow is the paper's own silhouette, drawn black and offset down-right, so the ragged edge casts a matching shadow) and only
-  then shows its Accept action: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 5/8 size (55×10) and centred; the drawn sprite is the click area. The active poster uses `abandon_text` (92×16, drawn 58×10) the same way.
+  then shows its Accept action: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 3/4 size (66×12) and centred; the drawn sprite is the click area. The active poster uses `abandon_text` (92×16, drawn 69×12) the same way.
   Hovering a poster shows the creature's **habitat lines from its entry's full knowledge** (a
   poster says where it was seen, whatever the player has unlocked) in a `Tooltips` tooltip headed
   "Last seen:"; there is no room on the paper. The model faces the viewer (yaw 180 + 25: in this

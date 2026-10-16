@@ -61,8 +61,8 @@ final class BountyBoardScreen extends Screen {
     private static final int REWARD_ICON_SIZE = 16;
     private static final float REWARD_ICON_SCALE = 0.625f;
     private static final float REWARD_GAP = 2f;
-    private static final int BUTTON_HEIGHT = 10;
-    private static final int BUTTON_BOTTOM_MARGIN = 6;
+    private static final int BUTTON_HEIGHT = 12;
+    private static final int BUTTON_BOTTOM_MARGIN = 5;
     private static final float HOVERED_SCALE = 1.1f;
     private static final float SHADOW_ALPHA = 0.6f;
     private static final int SHADOW_OFFSET = 2;
@@ -78,8 +78,8 @@ final class BountyBoardScreen extends Screen {
     private static final int SECONDS_PER_MINUTE = 60;
 
     private enum PosterButton {
-        ACCEPT("accept_text", 55),
-        ABANDON("abandon_text", 58);
+        ACCEPT("accept_text", 66),
+        ABANDON("abandon_text", 69);
 
         private final ResourceLocation sprite;
         private final ResourceLocation highlightedSprite;

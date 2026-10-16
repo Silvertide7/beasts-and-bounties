@@ -43,14 +43,14 @@ final class TrackingHud {
     static final int PING_MARGIN = 20;
     private static final int PING_BOTTOM_OFFSET = 100;
     private static final int PING_LINE_HEIGHT = 10;
-    private static final int PING_COLOR = 0xFFAA00;
+    private static final int PING_COLOR = 0x000000;
     private static final long PING_FADE_MILLIS = 2000L;
     private static final int MIN_VISIBLE_ALPHA = 8;
     private static final int OPAQUE = 255;
     private static final int TIMER_SIZE = 8;
     private static final int TIMER_GAP = 3;
     private static final int HUNT_TIMER_COLOR = 0x9CE07A;
-    private static final int HOLD_TEXT_COLOR = 0xFFAA00;
+    private static final int HOLD_TEXT_COLOR = 0x000000;
     private static final int HOLD_BAR_WIDTH = 60;
     private static final int HOLD_BAR_HEIGHT = 2;
     private static final int HOLD_BAR_GAP = 3;
@@ -96,7 +96,7 @@ final class TrackingHud {
         int top = graphics.guiHeight() - PING_BOTTOM_OFFSET - lines.size() * PING_LINE_HEIGHT;
         for (int i = 0; i < lines.size(); i++) {
             FormattedCharSequence line = lines.get(i);
-            graphics.drawString(minecraft.font, line, (graphics.guiWidth() - minecraft.font.width(line)) / 2, top + i * PING_LINE_HEIGHT, (alpha << 24) | PING_COLOR, true);
+            graphics.drawString(minecraft.font, line, (graphics.guiWidth() - minecraft.font.width(line)) / 2, top + i * PING_LINE_HEIGHT, (alpha << 24) | PING_COLOR, false);
         }
     }
 
@@ -149,7 +149,7 @@ final class TrackingHud {
                 .orElse(Component.empty());
         int centerX = graphics.guiWidth() / 2;
         int y = statusY(graphics);
-        graphics.drawString(minecraft.font, text, centerX - minecraft.font.width(text) / 2, y, HOLD_TEXT_COLOR, true);
+        graphics.drawString(minecraft.font, text, centerX - minecraft.font.width(text) / 2, y, HOLD_TEXT_COLOR, false);
         int barX = centerX - HOLD_BAR_WIDTH / 2;
         int barY = y + minecraft.font.lineHeight + HOLD_BAR_GAP;
         graphics.fill(barX, barY, barX + HOLD_BAR_WIDTH, barY + HOLD_BAR_HEIGHT, HOLD_BAR_BACKGROUND);
