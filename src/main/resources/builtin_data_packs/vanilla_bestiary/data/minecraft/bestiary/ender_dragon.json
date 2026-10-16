@@ -44,6 +44,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.1
+        },
+        {
+          "type": "passive_tracking",
+          "level": 1
         }
       ]
     },
@@ -83,6 +87,14 @@
         {
           "type": "bonus_experience",
           "amount": 0.1
+        },
+        {
+          "type": "passive_tracking",
+          "level": 2
+        },
+        {
+          "type": "active_tracking",
+          "level": 1
         }
       ]
     },
@@ -118,6 +130,10 @@
           "attribute": "minecraft:generic.movement_speed",
           "amount": 0.02,
           "operation": "add_multiplied_base"
+        },
+        {
+          "type": "passive_tracking",
+          "level": 3
         }
       ]
     },
@@ -139,6 +155,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.1
+        },
+        {
+          "type": "active_tracking",
+          "level": 2
         }
       ]
     },
@@ -166,6 +186,10 @@
           "attribute": "minecraft:generic.movement_speed",
           "amount": 0.02,
           "operation": "add_multiplied_base"
+        },
+        {
+          "type": "active_tracking",
+          "level": 3
         }
       ]
     }

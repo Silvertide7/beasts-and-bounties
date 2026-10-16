@@ -62,12 +62,32 @@ public sealed interface Reward {
         }
     }
 
+    record PassiveTracking(int level) implements Reward {
+        static final MapCodec<PassiveTracking> CODEC = Codec.intRange(1, 3).fieldOf("level").xmap(PassiveTracking::new, PassiveTracking::level);
+
+        @Override
+        public Type type() {
+            return Type.PASSIVE_TRACKING;
+        }
+    }
+
+    record ActiveTracking(int level) implements Reward {
+        static final MapCodec<ActiveTracking> CODEC = Codec.intRange(1, 3).fieldOf("level").xmap(ActiveTracking::new, ActiveTracking::level);
+
+        @Override
+        public Type type() {
+            return Type.ACTIVE_TRACKING;
+        }
+    }
+
     enum Type implements StringRepresentable {
         ATTRIBUTE("attribute"),
         DAMAGE_BONUS("damage_bonus"),
         DAMAGE_RESISTANCE("damage_resistance"),
         EXTRA_LOOT("extra_loot"),
-        BONUS_EXPERIENCE("bonus_experience");
+        BONUS_EXPERIENCE("bonus_experience"),
+        PASSIVE_TRACKING("passive_tracking"),
+        ACTIVE_TRACKING("active_tracking");
 
         static final Codec<Type> CODEC = StringRepresentable.fromEnum(Type::values);
 
@@ -84,6 +104,8 @@ public sealed interface Reward {
                 case DAMAGE_RESISTANCE -> DamageResistance.CODEC;
                 case EXTRA_LOOT -> ExtraLoot.CODEC;
                 case BONUS_EXPERIENCE -> BonusExperience.CODEC;
+                case PASSIVE_TRACKING -> PassiveTracking.CODEC;
+                case ACTIVE_TRACKING -> ActiveTracking.CODEC;
             };
         }
 

@@ -1,0 +1,16 @@
+{
+  "kills": 1,
+  "weight": 2,
+  "bonus_kills": 2,
+  "rewards": [
+    {
+      "type": "item",
+      "item": "minecraft:emerald",
+      "count": 16
+    },
+    {
+      "type": "experience",
+      "amount": 300
+    }
+  ]
+}

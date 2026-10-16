@@ -28,6 +28,9 @@ import net.silvertide.beasts_and_bounties.feature.bestiary.Knowledge;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Progress;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Reward;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Tier;
+import net.silvertide.beasts_and_bounties.feature.bounty.client.ClientBounties;
+import net.silvertide.beasts_and_bounties.feature.tracking.client.ClientTracking;
+import net.silvertide.beasts_and_bounties.feature.tracking.client.TrackingClientEvents;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -38,6 +41,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 public final class BestiaryScreen extends Screen {
     private static final ResourceLocation SPREAD_TEXTURE = BeastsAndBountiesMod.id("textures/gui/bestiary.png");
@@ -55,12 +60,24 @@ public final class BestiaryScreen extends Screen {
     private static final Area CONTENT_FOOTER_AREA = Area.fromTexture(588, 548, 370, 30);
     private static final int LINE_HEIGHT = 10;
     private static final int GLYPH_HEIGHT = 8;
-    private static final float BODY_TEXT_TARGET_SCALE = 0.75f;
 
     private static final ResourceLocation CLEAR_SEARCH_SPRITE = BeastsAndBountiesMod.id("bestiary/clear_search");
     private static final ResourceLocation CLEAR_SEARCH_HIGHLIGHTED_SPRITE = BeastsAndBountiesMod.id("bestiary/clear_search_highlighted");
     private static final int CLEAR_SEARCH_SIZE = 7;
     private static final int CLEAR_SEARCH_GAP = 2;
+
+    private static final ResourceLocation TRACK_BUTTON_SPRITE = BeastsAndBountiesMod.id("bestiary/track_button");
+    private static final ResourceLocation TRACK_BUTTON_HIGHLIGHTED_SPRITE = BeastsAndBountiesMod.id("bestiary/track_button_highlighted");
+    private static final ResourceLocation TRACKED_EYE_SPRITE = BeastsAndBountiesMod.id("bestiary/tracked_eye");
+    private static final ResourceLocation BOUNTY_MARK_SPRITE = BeastsAndBountiesMod.id("bestiary/bounty_mark");
+    private static final ResourceLocation TRACKED_BOUNTY_MARK_SPRITE = BeastsAndBountiesMod.id("bestiary/tracked_bounty_mark");
+    private static final int BOUNTY_ROW_COLOR = 0x40C04020;
+    private static final int TRACKED_ROW_COLOR = 0x402060C0;
+    private static final int TRACK_BUTTON_HEIGHT = 20;
+    private static final int TRACK_BUTTON_PADDING = 8;
+    private static final int TRACK_BUTTON_GAP = 3;
+    private static final int TRACK_BUTTON_TEXT_COLOR = 0xFFFFFF;
+    private static final int TRACKED_EYE_SIZE = 9;
     private static final int TEXT_COLOR = 0x000000;
     private static final int MUTED_TEXT_COLOR = 0x5A4A3A;
 
@@ -79,11 +96,6 @@ public final class BestiaryScreen extends Screen {
     private static final int TAB_ICON_INSET_X = 6;
     private static final int TAB_ICON_INSET_Y = 9;
     private static final int TAB_ICON_SIZE = 16;
-    private static final ResourceLocation TOOLTIP_SPRITE = BeastsAndBountiesMod.id("bestiary/tooltip");
-    private static final int TOOLTIP_PADDING = 4;
-    private static final int TOOLTIP_CURSOR_OFFSET = 12;
-    private static final int TOOLTIP_Z = 400;
-    private static final int TOOLTIP_TEXT_COLOR = 0xFFFFFF;
 
     private static final int ARROW_WIDTH = 23;
     private static final int ARROW_HEIGHT = 13;
@@ -99,7 +111,8 @@ public final class BestiaryScreen extends Screen {
     private enum Tab {
         OVERVIEW("overview"),
         KNOWLEDGE("knowledge"),
-        REWARDS("rewards");
+        REWARDS("rewards"),
+        TRACKING("tracking");
 
         private final Component title;
         private final ResourceLocation iconSprite;
@@ -109,6 +122,19 @@ public final class BestiaryScreen extends Screen {
             this.iconSprite = BeastsAndBountiesMod.id("bestiary/icon_" + name);
         }
     }
+
+    private enum TabShape {
+        LEFT, MIDDLE, RIGHT;
+
+        private final ResourceLocation sprite = BeastsAndBountiesMod.id("bestiary/tab_" + name().toLowerCase(Locale.ROOT));
+        private final ResourceLocation selectedSprite = BeastsAndBountiesMod.id("bestiary/tab_" + name().toLowerCase(Locale.ROOT) + "_selected");
+
+        static TabShape at(int index, int count) {
+            return index == 0 ? LEFT : index == count - 1 ? RIGHT : MIDDLE;
+        }
+    }
+
+    private record TabSlot(Tab tab, TabShape shape) {}
 
     private record Area(int x, int y, int width, int height) {
         static Area fromTexture(int x, int y, int width, int height) {
@@ -124,17 +150,31 @@ public final class BestiaryScreen extends Screen {
         }
     }
 
-    private record Row(ResourceLocation entityId, BestiaryEntry entry, Progress progress, Component name, String searchableName) {}
+    private record Row(ResourceLocation entityId, BestiaryEntry entry, Progress progress, Component name, FormattedCharSequence nameLine, String searchableName) {}
+
+    private static final int ROW_NAME_WIDTH = LIST_AREA.width() - ICON_SIZE - ICON_GAP - TRACKED_EYE_SIZE - ICON_GAP;
+    private static final ResourceLocation PAGE_FORWARD_SPRITE = BeastsAndBountiesMod.id("bestiary/page_forward");
+    private static final ResourceLocation PAGE_FORWARD_HIGHLIGHTED_SPRITE = BeastsAndBountiesMod.id("bestiary/page_forward_highlighted");
+    private static final ResourceLocation PAGE_BACKWARD_SPRITE = BeastsAndBountiesMod.id("bestiary/page_backward");
+    private static final ResourceLocation PAGE_BACKWARD_HIGHLIGHTED_SPRITE = BeastsAndBountiesMod.id("bestiary/page_backward_highlighted");
 
     private final List<Row> discoveredRows = new ArrayList<>();
     private final List<Row> filteredRows = new ArrayList<>();
-    private final List<Tab> visibleTabs = new ArrayList<>();
+    private final List<TabSlot> visibleTabs = new ArrayList<>();
+    private FormattedCharSequence headerNameLine = FormattedCharSequence.EMPTY;
+    private boolean trackButtonShown;
+    private Component trackButtonLabel = Component.empty();
+    private int trackButtonWidth;
     private final List<FormattedCharSequence> pageLines = new ArrayList<>();
     private EditBox searchBox;
     private int left;
     private int top;
     private float bodyTextScale = 1;
     private int listPage;
+    @Nullable
+    private ResourceLocation pinnedBounty;
+    @Nullable
+    private ResourceLocation pinnedTracked;
     private int contentPage;
     private Tab selectedTab = Tab.OVERVIEW;
     @Nullable
@@ -144,6 +184,7 @@ public final class BestiaryScreen extends Screen {
 
     private BestiaryScreen() {
         super(TITLE);
+        if (ClientTracking.trackedCreature().isPresent()) selectedTab = Tab.TRACKING;
     }
 
     public static void open() {
@@ -154,7 +195,7 @@ public final class BestiaryScreen extends Screen {
     protected void init() {
         left = (width - SPREAD_WIDTH) / 2;
         top = (height - SPREAD_HEIGHT + TAB_HEIGHT - SELECTED_TAB_OVERLAP) / 2;
-        bodyTextScale = pixelSnappedScale(BODY_TEXT_TARGET_SCALE);
+        bodyTextScale = GuiText.pixelSnappedBodyScale();
         String previousQuery = searchBox == null ? "" : searchBox.getValue();
         searchBox = new EditBox(font, left + SEARCH_AREA.x(), titleTextY(SEARCH_AREA), SEARCH_AREA.width() - CLEAR_SEARCH_SIZE - CLEAR_SEARCH_GAP, GLYPH_HEIGHT,
                 Component.translatable("gui.beasts_and_bounties.search"));
@@ -169,16 +210,27 @@ public final class BestiaryScreen extends Screen {
         refresh();
     }
 
-    void refresh() {
+    public static void refreshIfOpen() {
+        if (Minecraft.getInstance().screen instanceof BestiaryScreen screen) screen.refresh();
+    }
+
+    private void refresh() {
         discoveredRows.clear();
         ClientBestiary.entries().forEach((entityId, entry) -> {
             Progress progress = ClientBestiary.progress(entityId);
             if (!entry.isDiscovered(progress)) return;
             Component name = ClientBestiary.displayName(entityId, entry, progress);
             String searchableName = entry.knowledge(progress).name() ? name.getString().toLowerCase(Locale.ROOT) : "";
-            discoveredRows.add(new Row(entityId, entry, progress, name, searchableName));
+            discoveredRows.add(new Row(entityId, entry, progress, name, font.split(name, ROW_NAME_WIDTH).getFirst(), searchableName));
         });
-        discoveredRows.sort(Comparator.comparing((Row row) -> row.searchableName().isEmpty())
+        ResourceLocation bountied = ClientBounties.activeBountyCreature().orElse(null);
+        ResourceLocation tracked = ClientTracking.trackedCreature().orElse(null);
+        if (!Objects.equals(bountied, pinnedBounty) || !Objects.equals(tracked, pinnedTracked)) listPage = 0;
+        pinnedBounty = bountied;
+        pinnedTracked = tracked;
+        discoveredRows.sort(Comparator.comparing((Row row) -> !row.entityId().equals(bountied))
+                .thenComparing(row -> !row.entityId().equals(tracked))
+                .thenComparing(row -> row.searchableName().isEmpty())
                 .thenComparing(Row::searchableName)
                 .thenComparing(Row::entityId));
         applySearch();
@@ -217,19 +269,58 @@ public final class BestiaryScreen extends Screen {
 
         Knowledge knowledge = selectedRow.entry().knowledge(selectedRow.progress());
         List<Reward> rewards = selectedRow.entry().rewardsEarned(selectedRow.progress()).toList();
-        visibleTabs.add(Tab.OVERVIEW);
-        if (knowledge.hasDetails()) visibleTabs.add(Tab.KNOWLEDGE);
-        if (!rewards.isEmpty()) visibleTabs.add(Tab.REWARDS);
-        if (!visibleTabs.contains(selectedTab)) selectedTab = Tab.OVERVIEW;
+        Bonuses bonuses = selectedRow.entry().bonuses(selectedRow.progress());
+        List<Tab> tabs = new ArrayList<>(List.of(Tab.OVERVIEW));
+        if (knowledge.hasDetails()) tabs.add(Tab.KNOWLEDGE);
+        if (!rewards.isEmpty()) tabs.add(Tab.REWARDS);
+        if (bonuses.hasTracking() || isSelectedBountied()) tabs.add(Tab.TRACKING);
+        for (int i = 0; i < tabs.size(); i++) visibleTabs.add(new TabSlot(tabs.get(i), TabShape.at(i, tabs.size())));
+        if (!tabs.contains(selectedTab)) selectedTab = Tab.OVERVIEW;
+        rebuildHeader();
 
         switch (selectedTab) {
             case OVERVIEW -> buildOverview(knowledge);
             case KNOWLEDGE -> buildKnowledge(knowledge);
             case REWARDS -> buildRewards(rewards);
+            case TRACKING -> buildTracking(bonuses);
         }
 
         contentPage = Math.min(contentPage, contentPageCount() - 1);
         if (displayedEntity == null && knowledge.model()) displayedEntity = createDisplayEntity(selectedRow.entityId());
+    }
+
+    private boolean isSelectedBountied() {
+        return ClientBounties.activeBountyCreature().filter(selectedRow.entityId()::equals).isPresent();
+    }
+
+    private void rebuildHeader() {
+        trackButtonShown = selectedRow.entry().bonuses(selectedRow.progress()).hasTracking();
+        trackButtonLabel = Component.translatable(isSelectedTracked() ? "gui.beasts_and_bounties.stop_tracking" : "gui.beasts_and_bounties.track");
+        trackButtonWidth = font.width(trackButtonLabel) + TRACK_BUTTON_PADDING * 2;
+        headerNameLine = font.split(selectedRow.name(), HEADER_AREA.width() - ICON_SIZE - ICON_GAP).getFirst();
+    }
+
+    private void buildTracking(Bonuses bonuses) {
+        ClientBounties.activeBounty().filter(bounty -> bounty.entityId().equals(selectedRow.entityId())).ifPresent(bounty -> {
+            addLine(Component.translatable("gui.beasts_and_bounties.bounty_progress", bounty.killsSoFar(), bounty.killsRequired()).withStyle(ChatFormatting.DARK_RED));
+            pageLines.add(FormattedCharSequence.EMPTY);
+        });
+        if (!bonuses.hasTracking()) return;
+        addLine(Component.translatable(isSelectedTracked() ? "gui.beasts_and_bounties.tracking.tracked" : "gui.beasts_and_bounties.tracking.untracked"));
+        pageLines.add(FormattedCharSequence.EMPTY);
+        Component name = selectedRow.entry().displayName(selectedRow.entityId(), selectedRow.progress());
+        if (bonuses.passiveTracking() == 0) addLine(Component.translatable("gui.beasts_and_bounties.tracking.passive.none"));
+        else addTrackingLevel("passive", bonuses.passiveTracking(), name);
+        pageLines.add(FormattedCharSequence.EMPTY);
+        if (bonuses.activeTracking() == 0) addLine(Component.translatable("gui.beasts_and_bounties.tracking.active.none"));
+        else addTrackingLevel("active", bonuses.activeTracking(), TrackingClientEvents.huntKeyName(), name);
+    }
+
+    private void addTrackingLevel(String mode, int level, Object... details) {
+        String prefix = "tracking.beasts_and_bounties." + mode + "." + level;
+        addLine(Component.translatable("gui.beasts_and_bounties.tracking." + mode + ".heading",
+                Component.translatable("enchantment.level." + level), Component.translatable(prefix + ".name")).withStyle(ChatFormatting.BOLD));
+        addLine(Component.translatable(prefix + ".description", details));
     }
 
     private void buildOverview(Knowledge knowledge) {
@@ -239,7 +330,7 @@ public final class BestiaryScreen extends Screen {
                     .withStyle(entry.classification().nameColor()));
         knowledge.type().ifPresent(type -> addLine(type.copy().withStyle(ChatFormatting.ITALIC)));
         addLine(Component.translatable("gui.beasts_and_bounties.kills", selectedRow.progress().kills()));
-        if (entry.usesBounties()) addLine(Component.translatable("gui.beasts_and_bounties.bounties", selectedRow.progress().bounties()));
+        addLine(Component.translatable("gui.beasts_and_bounties.bounties", selectedRow.progress().bounties()));
         addLine(entry.nextRequirement(selectedRow.progress())
                 .map(requirement -> Component.translatable("gui.beasts_and_bounties.next_milestone", formatRequirement(requirement)))
                 .orElse(Component.translatable("gui.beasts_and_bounties.complete")));
@@ -365,32 +456,19 @@ public final class BestiaryScreen extends Screen {
 
     private void renderTabs(GuiGraphics graphics, boolean selectedPass) {
         for (int i = 0; i < visibleTabs.size(); i++) {
-            Tab tab = visibleTabs.get(i);
-            boolean selected = tab == selectedTab;
+            TabSlot slot = visibleTabs.get(i);
+            boolean selected = slot.tab() == selectedTab;
             if (selected != selectedPass) continue;
             int tabX = tabX(i);
             int tabY = tabY(selected);
-            graphics.blitSprite(tabSprite(i, selected), tabX, tabY, TAB_WIDTH, TAB_HEIGHT);
-            graphics.blitSprite(tab.iconSprite, tabX + TAB_ICON_INSET_X, tabY + TAB_ICON_INSET_Y, TAB_ICON_SIZE, TAB_ICON_SIZE);
+            graphics.blitSprite(selected ? slot.shape().selectedSprite : slot.shape().sprite, tabX, tabY, TAB_WIDTH, TAB_HEIGHT);
+            graphics.blitSprite(slot.tab().iconSprite, tabX + TAB_ICON_INSET_X, tabY + TAB_ICON_INSET_Y, TAB_ICON_SIZE, TAB_ICON_SIZE);
         }
-    }
-
-    private ResourceLocation tabSprite(int index, boolean selected) {
-        String position = index == 0 ? "left" : index == visibleTabs.size() - 1 ? "right" : "middle";
-        return BeastsAndBountiesMod.id("bestiary/tab_" + position + (selected ? "_selected" : ""));
     }
 
     private void renderTabTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
         Tab hovered = tabAt(mouseX, mouseY);
-        if (hovered == null) return;
-        int textX = mouseX + TOOLTIP_CURSOR_OFFSET;
-        int textY = mouseY - TOOLTIP_CURSOR_OFFSET;
-        graphics.pose().pushPose();
-        graphics.pose().translate(0, 0, TOOLTIP_Z);
-        graphics.blitSprite(TOOLTIP_SPRITE, textX - TOOLTIP_PADDING, textY - TOOLTIP_PADDING,
-                font.width(hovered.title) + TOOLTIP_PADDING * 2, font.lineHeight + TOOLTIP_PADDING * 2 - 1);
-        graphics.drawString(font, hovered.title, textX, textY, TOOLTIP_TEXT_COLOR, true);
-        graphics.pose().popPose();
+        if (hovered != null) Tooltips.render(graphics, font, List.of(hovered.title), mouseX, mouseY);
     }
 
     private void renderEntryList(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -403,9 +481,15 @@ public final class BestiaryScreen extends Screen {
         for (int i = firstRow; i < lastRow; i++) {
             Row row = filteredRows.get(i);
             int rowY = top + LIST_AREA.y() + (i - firstRow) * ROW_HEIGHT;
+            boolean bountied = row.entityId().equals(pinnedBounty);
+            boolean tracked = row.entityId().equals(pinnedTracked);
+            if (bountied) graphics.fill(x - 1, rowY, x + LIST_AREA.width(), rowY + ROW_HEIGHT, BOUNTY_ROW_COLOR);
+            else if (tracked) graphics.fill(x - 1, rowY, x + LIST_AREA.width(), rowY + ROW_HEIGHT, TRACKED_ROW_COLOR);
             if (row == selectedRow) graphics.fill(x - 1, rowY, x + LIST_AREA.width(), rowY + ROW_HEIGHT, SELECTED_ROW_COLOR);
             else if (row == hovered) graphics.fill(x - 1, rowY, x + LIST_AREA.width(), rowY + ROW_HEIGHT, HOVERED_ROW_COLOR);
-            renderNameWithIcon(graphics, row, x, rowY + 2, LIST_AREA.width());
+            renderNameWithIcon(graphics, row.entry().classification(), row.nameLine(), x, rowY + 2);
+            if (bountied || tracked) graphics.blitSprite(bountied && tracked ? TRACKED_BOUNTY_MARK_SPRITE : bountied ? BOUNTY_MARK_SPRITE : TRACKED_EYE_SPRITE,
+                    x + LIST_AREA.width() - TRACKED_EYE_SIZE, rowY + (ROW_HEIGHT - TRACKED_EYE_SIZE) / 2, TRACKED_EYE_SIZE, TRACKED_EYE_SIZE);
         }
         renderClearSearchButton(graphics, mouseX, mouseY);
         renderPageTurning(graphics, LIST_FOOTER_AREA, listPage, listPageCount(), mouseX, mouseY);
@@ -430,6 +514,30 @@ public final class BestiaryScreen extends Screen {
         return titleTextY(SEARCH_AREA);
     }
 
+    private boolean isSelectedTracked() {
+        return selectedRow != null && ClientTracking.trackedCreature().filter(selectedRow.entityId()::equals).isPresent();
+    }
+
+    private int trackButtonX() {
+        return left + CONTENT_AREA.x();
+    }
+
+    private int trackButtonY() {
+        return top + CONTENT_AREA.y();
+    }
+
+    private boolean isOverTrackButton(double mouseX, double mouseY) {
+        return selectedTab == Tab.TRACKING && trackButtonShown && mouseX >= trackButtonX() && mouseX < trackButtonX() + trackButtonWidth
+                && mouseY >= trackButtonY() && mouseY < trackButtonY() + TRACK_BUTTON_HEIGHT;
+    }
+
+    private void renderTrackButton(GuiGraphics graphics, int mouseX, int mouseY) {
+        ResourceLocation sprite = isOverTrackButton(mouseX, mouseY) ? TRACK_BUTTON_HIGHLIGHTED_SPRITE : TRACK_BUTTON_SPRITE;
+        graphics.blitSprite(sprite, trackButtonX(), trackButtonY(), trackButtonWidth, TRACK_BUTTON_HEIGHT);
+        graphics.drawString(font, trackButtonLabel, trackButtonX() + TRACK_BUTTON_PADDING,
+                trackButtonY() + (TRACK_BUTTON_HEIGHT - GLYPH_HEIGHT) / 2, TRACK_BUTTON_TEXT_COLOR, true);
+    }
+
     private void renderPageTurning(GuiGraphics graphics, Area footer, int page, int pageCount, int mouseX, int mouseY) {
         if (pageCount <= 1) return;
         if (page > 0) renderArrow(graphics, footer, false, mouseX, mouseY);
@@ -440,15 +548,16 @@ public final class BestiaryScreen extends Screen {
     }
 
     private void renderArrow(GuiGraphics graphics, Area footer, boolean forward, int mouseX, int mouseY) {
-        String sprite = (forward ? "bestiary/page_forward" : "bestiary/page_backward")
-                + (isOverArrow(mouseX, mouseY, footer, forward) ? "_highlighted" : "");
-        graphics.blitSprite(BeastsAndBountiesMod.id(sprite), arrowX(footer, forward), top + footer.y(), ARROW_WIDTH, ARROW_HEIGHT);
+        boolean highlighted = isOverArrow(mouseX, mouseY, footer, forward);
+        ResourceLocation sprite = forward
+                ? (highlighted ? PAGE_FORWARD_HIGHLIGHTED_SPRITE : PAGE_FORWARD_SPRITE)
+                : (highlighted ? PAGE_BACKWARD_HIGHLIGHTED_SPRITE : PAGE_BACKWARD_SPRITE);
+        graphics.blitSprite(sprite, arrowX(footer, forward), top + footer.y(), ARROW_WIDTH, ARROW_HEIGHT);
     }
 
-    private void renderNameWithIcon(GuiGraphics graphics, Row row, int x, int y, int width) {
-        row.entry().classification().iconSprite().ifPresent(sprite -> graphics.blitSprite(sprite, x, y, ICON_SIZE, ICON_SIZE));
-        int nameX = x + ICON_SIZE + ICON_GAP;
-        graphics.drawString(font, font.split(row.name(), width - ICON_SIZE - ICON_GAP).getFirst(), nameX, y, TEXT_COLOR, false);
+    private void renderNameWithIcon(GuiGraphics graphics, Classification classification, FormattedCharSequence nameLine, int x, int y) {
+        classification.iconSprite().ifPresent(sprite -> graphics.blitSprite(sprite, x, y, ICON_SIZE, ICON_SIZE));
+        graphics.drawString(font, nameLine, x + ICON_SIZE + ICON_GAP, y, TEXT_COLOR, false);
     }
 
     private void renderPage(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -456,11 +565,14 @@ public final class BestiaryScreen extends Screen {
         int headerX = left + HEADER_AREA.x();
         int headerY = titleTextY(HEADER_AREA);
         if (selectedRow == null) {
-            graphics.drawString(font, Component.translatable("gui.beasts_and_bounties.empty"), headerX, headerY, MUTED_TEXT_COLOR, false);
+            List<FormattedCharSequence> emptyLines = font.split(Component.translatable("gui.beasts_and_bounties.empty"), CONTENT_AREA.width());
+            for (int i = 0; i < emptyLines.size(); i++)
+                graphics.drawString(font, emptyLines.get(i), x, top + CONTENT_AREA.y() + i * LINE_HEIGHT, MUTED_TEXT_COLOR, false);
             return;
         }
-        renderNameWithIcon(graphics, selectedRow, headerX, headerY, HEADER_AREA.width());
+        renderNameWithIcon(graphics, selectedRow.entry().classification(), headerNameLine, headerX, headerY);
         if (selectedTab == Tab.OVERVIEW) renderModel(graphics, x, top + CONTENT_AREA.y());
+        if (selectedTab == Tab.TRACKING && trackButtonShown) renderTrackButton(graphics, mouseX, mouseY);
         int firstLine = contentPage * linesPerContentPage();
         int lastLine = Math.min(pageLines.size(), firstLine + linesPerContentPage());
         graphics.pose().pushPose();
@@ -473,7 +585,11 @@ public final class BestiaryScreen extends Screen {
     }
 
     private int contentLinesTop() {
-        return CONTENT_AREA.y() + (selectedTab == Tab.OVERVIEW ? MODEL_BOX_HEIGHT : 0);
+        return CONTENT_AREA.y() + switch (selectedTab) {
+            case OVERVIEW -> MODEL_BOX_HEIGHT;
+            case TRACKING -> trackButtonShown ? TRACK_BUTTON_HEIGHT + TRACK_BUTTON_GAP : 0;
+            default -> 0;
+        };
     }
 
     private int linesPerContentPage() {
@@ -527,6 +643,11 @@ public final class BestiaryScreen extends Screen {
             return true;
         }
         if (turnPageIfArrowClicked(mouseX, mouseY)) return true;
+        if (isOverTrackButton(mouseX, mouseY)) {
+            ClientTracking.requestTracking(isSelectedTracked() ? Optional.empty() : Optional.of(selectedRow.entityId()));
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            return true;
+        }
         if (!searchBox.getValue().isEmpty() && isOverClearSearch(mouseX, mouseY)) {
             searchBox.setValue("");
             return true;
@@ -565,8 +686,9 @@ public final class BestiaryScreen extends Screen {
     private Tab tabAt(double mouseX, double mouseY) {
         for (int i = 0; i < visibleTabs.size(); i++) {
             int tabX = tabX(i);
-            int tabY = tabY(visibleTabs.get(i) == selectedTab);
-            if (mouseX >= tabX && mouseX < tabX + TAB_WIDTH && mouseY >= tabY && mouseY < top) return visibleTabs.get(i);
+            Tab tab = visibleTabs.get(i).tab();
+            int tabY = tabY(tab == selectedTab);
+            if (mouseX >= tabX && mouseX < tabX + TAB_WIDTH && mouseY >= tabY && mouseY < top) return tab;
         }
         return null;
     }
@@ -593,10 +715,6 @@ public final class BestiaryScreen extends Screen {
         return top + area.y() + (area.height() - GLYPH_HEIGHT) / 2;
     }
 
-    private float pixelSnappedScale(float targetScale) {
-        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
-        return (float) (Math.max(1, Math.round(guiScale * targetScale)) / guiScale);
-    }
 
     private static int guiPixels(int texturePixels) {
         return Math.round(texturePixels / TEXTURE_PIXELS_PER_GUI_PIXEL);

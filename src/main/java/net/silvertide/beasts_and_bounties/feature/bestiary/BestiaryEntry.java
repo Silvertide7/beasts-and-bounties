@@ -3,6 +3,10 @@ package net.silvertide.beasts_and_bounties.feature.bestiary;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +19,7 @@ public final class BestiaryEntry {
     ).apply(instance, BestiaryEntry::new));
 
     private static final int NO_MILESTONE = -1;
+    private static final Component UNKNOWN_NAME = Component.literal("???");
 
     private final Classification classification;
     private final List<Milestone> milestones;
@@ -33,6 +38,8 @@ public final class BestiaryEntry {
         double damageResistance = 0;
         double extraLootChance = 0;
         double bonusExperience = 0;
+        int passiveTracking = 0;
+        int activeTracking = 0;
         for (int i = 0; i < count; i++) {
             Milestone milestone = this.milestones.get(i);
             knowledge = knowledge.merge(milestone.knowledge());
@@ -42,11 +49,13 @@ public final class BestiaryEntry {
                     case Reward.DamageResistance resistance -> damageResistance += resistance.amount();
                     case Reward.ExtraLoot extraLoot -> extraLootChance += extraLoot.chance();
                     case Reward.BonusExperience experience -> bonusExperience += experience.amount();
+                    case Reward.PassiveTracking tracking -> passiveTracking = Math.max(passiveTracking, tracking.level());
+                    case Reward.ActiveTracking tracking -> activeTracking = Math.max(activeTracking, tracking.level());
                     case Reward.AttributeBonus attribute -> {}
                 }
             }
             knowledgeAtMilestone[i] = knowledge;
-            bonusesAtMilestone[i] = Bonuses.fromTotals(damageBonus, damageResistance, extraLootChance, bonusExperience);
+            bonusesAtMilestone[i] = Bonuses.fromTotals(damageBonus, damageResistance, extraLootChance, bonusExperience, passiveTracking, activeTracking);
         }
     }
 
@@ -71,6 +80,14 @@ public final class BestiaryEntry {
     public Knowledge knowledge(Progress progress) {
         int reached = milestoneReached(progress);
         return reached == NO_MILESTONE ? Knowledge.EMPTY : knowledgeAtMilestone[reached];
+    }
+
+    public Component displayName(ResourceLocation entityId, Progress progress) {
+        return knowledge(progress).name() ? BuiltInRegistries.ENTITY_TYPE.get(entityId).getDescription() : UNKNOWN_NAME;
+    }
+
+    public Knowledge fullKnowledge() {
+        return knowledgeAtMilestone[knowledgeAtMilestone.length - 1];
     }
 
     public Bonuses bonuses(Progress progress) {

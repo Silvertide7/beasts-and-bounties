@@ -7,7 +7,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -22,8 +22,8 @@ import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
+import net.silvertide.beasts_and_bounties.core.Payloads;
 import net.silvertide.silverlib.feature.combat.CombatTracking;
 
 import java.util.Map;
@@ -41,17 +41,19 @@ public final class BestiaryEvents {
     }
 
     @SubscribeEvent
-    static void syncAfterDatapackLoad(OnDatapackSyncEvent event) {
+    static void syncEntriesAndProgress(OnDatapackSyncEvent event) {
         BestiaryPayloads.Entries entries = new BestiaryPayloads.Entries(BestiaryEntries.all());
         event.getRelevantPlayers().forEach(player -> {
-            PacketDistributor.sendToPlayer(player, entries, new BestiaryPayloads.AllProgress(Map.copyOf(BestiaryProgress.all(player))));
+            Payloads.sendIfConnected(player, entries, new BestiaryPayloads.AllProgress(Map.copyOf(BestiaryProgress.all(player))));
             BestiaryAttributes.reapply(player);
         });
     }
 
     @SubscribeEvent
     static void reapplyAttributesOnRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) BestiaryAttributes.reapply(player);
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        BestiaryAttributes.reapply(player);
+        if (!event.isEndConquered()) player.setHealth(player.getMaxHealth());
     }
 
     @SubscribeEvent
@@ -79,18 +81,18 @@ public final class BestiaryEvents {
         if (attacker == null) return;
         LivingEntity victim = event.getEntity();
         double multiplier = 1;
-        if (attacker instanceof ServerPlayer player) multiplier *= bonusesAgainst(player, victim.getType()).damageMultiplier();
-        if (victim instanceof ServerPlayer player) multiplier *= bonusesAgainst(player, attacker.getType()).damageTakenMultiplier();
+        if (attacker instanceof ServerPlayer player) multiplier *= BestiaryProgress.bonuses(player, victim.getType()).damageMultiplier();
+        if (victim instanceof ServerPlayer player) multiplier *= BestiaryProgress.bonuses(player, attacker.getType()).damageTakenMultiplier();
         if (multiplier != 1) event.setAmount((float) (event.getAmount() * multiplier));
     }
 
     @SubscribeEvent
     static void rollExtraLoot(LivingDropsEvent event) {
         LivingEntity victim = event.getEntity();
-        if (!event.isRecentlyHit() || !(victim.level() instanceof ServerLevel level)) return;
+        if (!(victim.level() instanceof ServerLevel level) || victim.isBaby() || !level.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)) return;
         ServerPlayer killer = CombatTracking.attributedPlayer(event.getSource().getEntity());
         if (killer == null) return;
-        double chance = bonusesAgainst(killer, victim.getType()).extraLootChance();
+        double chance = BestiaryProgress.bonuses(killer, victim.getType()).extraLootChance();
         if (chance <= 0 || victim.getRandom().nextDouble() >= chance) return;
 
         LootParams params = new LootParams.Builder(level)
@@ -112,12 +114,7 @@ public final class BestiaryEvents {
     @SubscribeEvent
     static void applyBonusExperience(LivingExperienceDropEvent event) {
         if (!(event.getAttackingPlayer() instanceof ServerPlayer player)) return;
-        double multiplier = bonusesAgainst(player, event.getEntity().getType()).experienceMultiplier();
+        double multiplier = BestiaryProgress.bonuses(player, event.getEntity().getType()).experienceMultiplier();
         if (multiplier != 1) event.setDroppedExperience((int) Math.round(event.getDroppedExperience() * multiplier));
-    }
-
-    private static Bonuses bonusesAgainst(Player player, EntityType<?> entityType) {
-        BestiaryEntry entry = BestiaryEntries.get(entityType);
-        return entry == null ? Bonuses.NONE : entry.bonuses(BestiaryProgress.of(player, entityType));
     }
 }

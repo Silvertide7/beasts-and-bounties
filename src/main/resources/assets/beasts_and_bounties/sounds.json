@@ -1,0 +1,20 @@
+{
+  "tracking.hunt_start": {
+    "subtitle": "subtitles.beasts_and_bounties.hunt_start",
+    "sounds": [
+      {
+        "name": "minecraft:entity.fox.sniff",
+        "type": "event"
+      }
+    ]
+  },
+  "bounty.claimed": {
+    "subtitle": "subtitles.beasts_and_bounties.bounty_claimed",
+    "sounds": [
+      {
+        "name": "minecraft:entity.villager.yes",
+        "type": "event"
+      }
+    ]
+  }
+}

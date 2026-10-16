@@ -45,6 +45,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.1
+        },
+        {
+          "type": "passive_tracking",
+          "level": 1
         }
       ]
     },
@@ -81,6 +85,14 @@
         {
           "type": "bonus_experience",
           "amount": 0.1
+        },
+        {
+          "type": "passive_tracking",
+          "level": 2
+        },
+        {
+          "type": "active_tracking",
+          "level": 1
         }
       ]
     },
@@ -116,6 +128,10 @@
           "attribute": "minecraft:generic.max_health",
           "amount": 2.0,
           "operation": "add_value"
+        },
+        {
+          "type": "passive_tracking",
+          "level": 3
         }
       ]
     },
@@ -137,6 +153,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.1
+        },
+        {
+          "type": "active_tracking",
+          "level": 2
         }
       ]
     },
@@ -164,6 +184,10 @@
           "attribute": "minecraft:generic.max_health",
           "amount": 2.0,
           "operation": "add_value"
+        },
+        {
+          "type": "active_tracking",
+          "level": 3
         }
       ]
     }

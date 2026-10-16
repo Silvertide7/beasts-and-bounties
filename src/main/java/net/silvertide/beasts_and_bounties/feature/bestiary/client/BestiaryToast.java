@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 
-final class BestiaryToast implements Toast {
+public final class BestiaryToast implements Toast {
     private static final ResourceLocation BACKGROUND_SPRITE = BeastsAndBountiesMod.id("bestiary/toast");
     private static final ResourceLocation ICON_SPRITE = BeastsAndBountiesMod.id("bestiary/icon_overview");
     private static final long DISPLAY_MILLIS = 5000L;
@@ -31,7 +31,7 @@ final class BestiaryToast implements Toast {
         this.message = message;
     }
 
-    static void show(Component title, Component message) {
+    public static void show(Component title, Component message) {
         ToastComponent toasts = Minecraft.getInstance().getToasts();
         BestiaryToast visible = toasts.getToast(BestiaryToast.class, NO_TOKEN);
         if (visible == null) {

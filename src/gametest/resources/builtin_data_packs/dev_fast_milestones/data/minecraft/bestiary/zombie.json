@@ -30,6 +30,12 @@
         {
           "translate": "bestiary.beasts_and_bounties.zombie.attack_patterns.1"
         }
+      ],
+      "rewards": [
+        {
+          "type": "passive_tracking",
+          "level": 1
+        }
       ]
     },
     {
@@ -50,6 +56,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "passive_tracking",
+          "level": 2
         }
       ]
     },
@@ -70,6 +80,10 @@
         {
           "type": "damage_bonus",
           "amount": 0.02
+        },
+        {
+          "type": "active_tracking",
+          "level": 1
         }
       ]
     },
@@ -98,6 +112,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "passive_tracking",
+          "level": 3
         }
       ]
     },
@@ -112,6 +130,10 @@
         {
           "type": "damage_bonus",
           "amount": 0.02
+        },
+        {
+          "type": "active_tracking",
+          "level": 2
         }
       ]
     },
@@ -129,6 +151,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "active_tracking",
+          "level": 3
         }
       ]
     },

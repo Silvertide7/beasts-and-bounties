@@ -7,7 +7,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.silvertide.beasts_and_bounties.core.Payloads;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
@@ -49,6 +49,16 @@ public final class BestiaryProgress {
         return of(player, EntityType.getKey(entityType));
     }
 
+    public static Bonuses bonuses(Player player, EntityType<?> entityType) {
+        BestiaryEntry entry = BestiaryEntries.get(entityType);
+        return entry == null ? Bonuses.NONE : entry.bonuses(of(player, entityType));
+    }
+
+    public static Bonuses bonuses(Player player, ResourceLocation entityId) {
+        BestiaryEntry entry = BestiaryEntries.get(entityId);
+        return entry == null ? Bonuses.NONE : entry.bonuses(of(player, entityId));
+    }
+
     public static void addKills(ServerPlayer player, ResourceLocation entityId, BestiaryEntry entry, int amount) {
         Progress progress = of(player, entityId);
         set(player, entityId, entry, progress.withKills(saturatingAdd(progress.kills(), amount)));
@@ -63,13 +73,13 @@ public final class BestiaryProgress {
         Progress previous = of(player, entityId);
         if (progress.equals(Progress.NONE)) all(player).remove(entityId);
         else all(player).put(entityId, progress);
-        PacketDistributor.sendToPlayer(player, new BestiaryPayloads.ProgressUpdate(entityId, progress));
+        Payloads.sendIfConnected(player, new BestiaryPayloads.ProgressUpdate(entityId, progress));
         if (entry.milestoneReached(previous) != entry.milestoneReached(progress)) BestiaryAttributes.reapply(player);
     }
 
     public static void resetAll(ServerPlayer player) {
         all(player).clear();
-        PacketDistributor.sendToPlayer(player, new BestiaryPayloads.AllProgress(Map.of()));
+        Payloads.sendIfConnected(player, new BestiaryPayloads.AllProgress(Map.of()));
         BestiaryAttributes.reapply(player);
     }
 

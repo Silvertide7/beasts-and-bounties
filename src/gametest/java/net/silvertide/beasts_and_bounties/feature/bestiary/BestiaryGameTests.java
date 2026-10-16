@@ -2,6 +2,24 @@ package net.silvertide.beasts_and_bounties.feature.bestiary;
 
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.damagesource.DamageSources;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.monster.Skeleton;
+import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameRules;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.damagesource.DamageContainer;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,6 +29,7 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @GameTestHolder(BeastsAndBountiesMod.MODID)
@@ -151,6 +170,130 @@ public class BestiaryGameTests {
         BestiaryEntry bountyFirst = BestiaryEntries.mergeInPackOrder(EntityType.getKey(EntityType.ZOMBIE), List.of(bountyOnly), ops);
         helper.assertFalse(bountyFirst.isDiscovered(new Progress(99, 0)), "a bounty-only milestone sorts first and gates the whole entry");
         helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void killsAreCreditedToEveryParticipant(GameTestHelper helper) {
+        ServerPlayer killer = helper.makeMockServerPlayerInLevel();
+        ServerPlayer helperPlayer = helper.makeMockServerPlayerInLevel();
+        Zombie zombie = spawnStill(helper, EntityType.ZOMBIE, killer);
+        DamageSources sources = helper.getLevel().damageSources();
+        zombie.hurt(sources.playerAttack(helperPlayer), 1f);
+        zombie.invulnerableTime = 0;
+        zombie.hurt(sources.playerAttack(killer), 1000f);
+        helper.assertTrue(zombie.isDeadOrDying(), "the zombie should be dead");
+        helper.assertTrue(BestiaryProgress.of(killer, EntityType.ZOMBIE).kills() == 1, "the killer gets one kill");
+        helper.assertTrue(BestiaryProgress.of(helperPlayer, EntityType.ZOMBIE).kills() == 1, "a player who only hit it also gets one kill");
+        helper.assertTrue(BestiaryProgress.of(killer, EntityType.SKELETON).kills() == 0, "nothing else is credited");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void settingProgressReappliesAttributesAcrossMilestones(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ResourceLocation wither = EntityType.getKey(EntityType.WITHER);
+        BestiaryEntry entry = BestiaryEntries.get(wither);
+        double baseMaxHealth = player.getAttributeValue(Attributes.MAX_HEALTH);
+        BestiaryProgress.set(player, wither, entry, kills(3));
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 2, "half the wither boon at 3 kills");
+        BestiaryProgress.set(player, wither, entry, kills(4));
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 2, "a milestone without an attribute changes nothing");
+        BestiaryProgress.set(player, wither, entry, kills(5));
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 4, "the full wither boon at 5 kills");
+        BestiaryProgress.set(player, wither, entry, Progress.NONE);
+        helper.assertFalse(BestiaryProgress.all(player).containsKey(wither), "setting NONE removes the key");
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth, "the boon leaves with the progress");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void adminCommandsClampCompleteAndReset(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        CommandSourceStack source = player.createCommandSourceStack().withPermission(Commands.LEVEL_GAMEMASTERS);
+        Commands commands = helper.getLevel().getServer().getCommands();
+        ResourceLocation skeleton = EntityType.getKey(EntityType.SKELETON);
+        commands.performPrefixedCommand(source, "bestiary kills set @s minecraft:skeleton 3");
+        helper.assertTrue(BestiaryProgress.of(player, skeleton).kills() == 3, "set writes the count");
+        commands.performPrefixedCommand(source, "bestiary bounties add @s minecraft:skeleton 2");
+        helper.assertTrue(BestiaryProgress.of(player, skeleton).bounties() == 2, "add raises the other counter");
+        commands.performPrefixedCommand(source, "bestiary kills remove @s minecraft:skeleton 5");
+        helper.assertTrue(BestiaryProgress.of(player, skeleton).kills() == 0 && BestiaryProgress.of(player, skeleton).bounties() == 2, "remove clamps at zero and keeps the other counter");
+        commands.performPrefixedCommand(source, "bestiary kills set @s minecraft:skeleton 300");
+        commands.performPrefixedCommand(source, "bestiary complete @s minecraft:skeleton");
+        helper.assertTrue(BestiaryProgress.of(player, skeleton).kills() == 300, "complete never lowers progress");
+        commands.performPrefixedCommand(source, "bestiary complete @s");
+        helper.assertTrue(BestiaryProgress.of(player, EntityType.COW).kills() == 250, "complete raises every entry to its final requirement");
+        commands.performPrefixedCommand(source, "bestiary reset @s minecraft:skeleton");
+        helper.assertFalse(BestiaryProgress.all(player).containsKey(skeleton), "reset for one entry removes its key");
+        commands.performPrefixedCommand(source, "bestiary reset @s");
+        helper.assertTrue(BestiaryProgress.all(player).isEmpty(), "reset clears everything");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void damageHooksScaleHitsLootAndExperience(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        BestiaryProgress.all(player).put(EntityType.getKey(EntityType.COW), kills(250));
+        BestiaryProgress.all(player).put(EntityType.getKey(EntityType.SKELETON), kills(250));
+        Cow cow = spawnStill(helper, EntityType.COW, player);
+        Skeleton skeleton = spawnStill(helper, EntityType.SKELETON, player);
+        DamageSources sources = helper.getLevel().damageSources();
+
+        LivingIncomingDamageEvent dealt = new LivingIncomingDamageEvent(cow, new DamageContainer(sources.playerAttack(player), 10f));
+        NeoForge.EVENT_BUS.post(dealt);
+        assertClose(helper, dealt.getAmount(), 11, "+10% damage against a completed cow");
+        LivingIncomingDamageEvent taken = new LivingIncomingDamageEvent(player, new DamageContainer(sources.mobAttack(skeleton), 10f));
+        NeoForge.EVENT_BUS.post(taken);
+        assertClose(helper, taken.getAmount(), 9, "10% less damage taken from a completed skeleton");
+
+        helper.assertTrue(extraDrops(cow, sources, player).stream().anyMatch(drop -> drop.getItem().is(Items.BEEF)), "100% extra loot rolls the cow's loot table");
+        cow.setBaby(true);
+        helper.assertTrue(extraDrops(cow, sources, player).isEmpty(), "babies drop nothing, so there is no extra roll");
+        cow.setBaby(false);
+        GameRules.BooleanValue mobLoot = helper.getLevel().getGameRules().getRule(GameRules.RULE_DOMOBLOOT);
+        mobLoot.set(false, helper.getLevel().getServer());
+        helper.assertTrue(extraDrops(cow, sources, player).isEmpty(), "doMobLoot off means no extra roll");
+        mobLoot.set(true, helper.getLevel().getServer());
+
+        LivingExperienceDropEvent experience = new LivingExperienceDropEvent(cow, player, 10);
+        NeoForge.EVENT_BUS.post(experience);
+        helper.assertTrue(experience.getDroppedExperience() == 15, "+50% experience, got " + experience.getDroppedExperience());
+        cow.discard();
+        skeleton.discard();
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void progressSurvivesSavingAndDeath(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ResourceLocation skeleton = EntityType.getKey(EntityType.SKELETON);
+        BestiaryProgress.all(player).put(skeleton, new Progress(7, 2));
+        CompoundTag saved = player.saveWithoutId(new CompoundTag());
+        ServerPlayer loaded = helper.makeMockServerPlayerInLevel();
+        loaded.load(saved);
+        helper.assertTrue(BestiaryProgress.of(loaded, skeleton).equals(new Progress(7, 2)), "progress round-trips through NBT");
+        ServerPlayer respawned = helper.makeMockServerPlayerInLevel();
+        NeoForge.EVENT_BUS.post(new PlayerEvent.Clone(respawned, player, true));
+        helper.assertTrue(BestiaryProgress.of(respawned, skeleton).equals(new Progress(7, 2)), "progress is copied on death");
+        helper.succeed();
+    }
+
+    private static <T extends LivingEntity> T spawnStill(GameTestHelper helper, EntityType<T> type, ServerPlayer near) {
+        T entity = type.create(helper.getLevel());
+        entity.moveTo(near.getX() + 2, near.getY(), near.getZ());
+        helper.getLevel().addFreshEntity(entity);
+        return entity;
+    }
+
+    private static List<ItemEntity> extraDrops(LivingEntity victim, DamageSources sources, ServerPlayer killer) {
+        LivingDropsEvent event = new LivingDropsEvent(victim, sources.playerAttack(killer), new ArrayList<>(), true);
+        NeoForge.EVENT_BUS.post(event);
+        return new ArrayList<>(event.getDrops());
     }
 
     private static Progress kills(int kills) {

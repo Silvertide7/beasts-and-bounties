@@ -99,6 +99,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "passive_tracking",
+          "level": 1
         }
       ]
     },
@@ -130,6 +134,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "passive_tracking",
+          "level": 2
         }
       ]
     },
@@ -164,6 +172,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "active_tracking",
+          "level": 1
         }
       ]
     },
@@ -198,6 +210,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "passive_tracking",
+          "level": 3
         }
       ]
     },
@@ -232,6 +248,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "active_tracking",
+          "level": 2
         }
       ]
     },
@@ -251,6 +271,10 @@
           "attribute": "minecraft:generic.attack_speed",
           "amount": 0.01,
           "operation": "add_multiplied_base"
+        },
+        {
+          "type": "active_tracking",
+          "level": 3
         }
       ]
     }

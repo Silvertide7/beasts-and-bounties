@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "beasts_and_bounties:item/bounty_board"
+  }
+}

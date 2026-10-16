@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:oak_sign" },
+    { "item": "minecraft:paper" }
+  ],
+  "result": { "id": "beasts_and_bounties:bounty_board", "count": 1 }
+}

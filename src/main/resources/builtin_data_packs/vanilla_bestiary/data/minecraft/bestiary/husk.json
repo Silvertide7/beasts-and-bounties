@@ -88,6 +88,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "passive_tracking",
+          "level": 1
         }
       ]
     },
@@ -119,6 +123,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "passive_tracking",
+          "level": 2
         }
       ]
     },
@@ -153,6 +161,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "active_tracking",
+          "level": 1
         }
       ]
     },
@@ -187,6 +199,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "passive_tracking",
+          "level": 3
         }
       ]
     },
@@ -221,6 +237,10 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        },
+        {
+          "type": "active_tracking",
+          "level": 2
         }
       ]
     },
@@ -240,6 +260,10 @@
           "attribute": "minecraft:generic.armor",
           "amount": 0.5,
           "operation": "add_value"
+        },
+        {
+          "type": "active_tracking",
+          "level": 3
         }
       ]
     }

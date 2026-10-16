@@ -1,7 +1,6 @@
 package net.silvertide.beasts_and_bounties.feature.bestiary;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
@@ -14,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.EntityType;
 import org.jetbrains.annotations.Nullable;
@@ -71,7 +71,7 @@ public final class BestiaryEntries extends SimplePreparableReloadListener<Map<Re
             List<PackFile> parsed = new ArrayList<>();
             for (Resource resource : stack) {
                 try (Reader reader = resource.openAsReader()) {
-                    parsed.add(new PackFile(resource.sourcePackId(), JsonParser.parseReader(reader)));
+                    parsed.add(new PackFile(resource.sourcePackId(), GsonHelper.parse(reader)));
                 } catch (IOException | RuntimeException exception) {
                     LOGGER.warn("Skipping bestiary file {} from pack {}: {}", file, resource.sourcePackId(), exception.getMessage());
                 }
