@@ -1,11 +1,11 @@
 package net.silvertide.beasts_and_bounties.feature.bounty.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.BestiaryScreen;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.BestiaryToast;
-import net.silvertide.beasts_and_bounties.feature.bestiary.client.ClientBestiary;
 import net.silvertide.beasts_and_bounties.feature.bounty.BountyPayloads;
 import net.silvertide.beasts_and_bounties.feature.bounty.BountyState;
 
@@ -28,7 +28,7 @@ public final class ClientBounties {
     }
 
     public static void claimed(ResourceLocation entityId) {
-        BestiaryToast.show(Component.translatable("toast.beasts_and_bounties.bounty_claimed"), ClientBestiary.creatureName(entityId));
+        BestiaryToast.show(Component.translatable("toast.beasts_and_bounties.bounty_claimed"), BuiltInRegistries.ENTITY_TYPE.get(entityId).getDescription());
     }
 
     public static Optional<BountyState.ActiveBounty> activeBounty() {

@@ -1,7 +1,9 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
@@ -50,7 +52,7 @@ public final class PlayerBounties {
         List<BountyOffers.Offer> shown = state.active()
                 .map(bounty -> Optional.ofNullable(BountyDefinitions.all().get(bounty.entityId()))
                         .map(definition -> List.of(new BountyOffers.Offer(bounty.entityId(), definition))).orElse(List.of()))
-                .orElseGet(() -> BountyOffers.forPlayer(player, now));
+                .orElseGet(() -> BountyOffers.current(player.server, now));
         List<BountyPayloads.Offer> offers = shown.stream()
                 .map(offer -> new BountyPayloads.Offer(offer.entityId(), offer.definition().kills(), offer.definition().itemRewards(),
                         offer.definition().experienceReward(), skillExperienceLines(offer.definition()), lastSeen(offer.entityId())))
@@ -78,14 +80,14 @@ public final class PlayerBounties {
                     ? "bounty.beasts_and_bounties.already_active" : "bounty.beasts_and_bounties.cooldown"), true);
             return;
         }
-        Optional<BountyOffers.Offer> offer = BountyOffers.forPlayer(player, now).stream().filter(candidate -> candidate.entityId().equals(entityId)).findFirst();
+        Optional<BountyOffers.Offer> offer = BountyOffers.current(player.server, now).stream().filter(candidate -> candidate.entityId().equals(entityId)).findFirst();
         if (offer.isEmpty()) {
             player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.not_offered"), true);
             return;
         }
         int kills = offer.get().definition().kills();
         store(player, state.accepted(entityId, kills));
-        player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.accepted" + (kills == 1 ? ".one" : ""), creatureName(player, entityId), kills), true);
+        player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.accepted" + (kills == 1 ? ".one" : ""), creatureName(entityId), kills), true);
         openBoard(player);
     }
 
@@ -125,8 +127,8 @@ public final class PlayerBounties {
         Payloads.sendIfConnected(player, new BountyPayloads.BountyClaimed(bounty.entityId()));
     }
 
-    static void reroll(ServerPlayer player) {
-        store(player, state(player).rerolled());
+    static void reroll(MinecraftServer server) {
+        BoardRerolls.of(server).increment();
     }
 
     static void clear(ServerPlayer player) {
@@ -139,8 +141,7 @@ public final class PlayerBounties {
         Payloads.sendIfConnected(player, new BountyPayloads.StateSync(state(player)));
     }
 
-    private static Component creatureName(Player player, ResourceLocation entityId) {
-        BestiaryEntry entry = BestiaryEntries.get(entityId);
-        return entry == null ? Component.literal(entityId.toString()) : entry.displayName(entityId, BestiaryProgress.of(player, entityId));
+    private static Component creatureName(ResourceLocation entityId) {
+        return BuiltInRegistries.ENTITY_TYPE.get(entityId).getDescription();
     }
 }

@@ -25,7 +25,6 @@ import net.silvertide.beasts_and_bounties.feature.bestiary.Progress;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @GameTestHolder(BeastsAndBountiesMod.MODID)
 @PrefixGameTestTemplate(false)
@@ -56,18 +55,21 @@ public class BountyGameTests {
 
     @GameTest(template = "empty")
     public static void offersAreStableWithinAPeriodAndChangeAcrossPeriods(GameTestHelper helper) {
-        UUID playerId = UUID.nameUUIDFromBytes("bounty-test".getBytes());
-        List<BountyOffers.Offer> first = BountyOffers.pick(playerId, 42, 1, 0, 3, BountyDefinitions.all());
-        List<BountyOffers.Offer> again = BountyOffers.pick(playerId, 42, 1, 0, 3, BountyDefinitions.all());
+        List<BountyOffers.Offer> first = BountyOffers.pick(42, 1, 0, 3, BountyDefinitions.all());
+        List<BountyOffers.Offer> again = BountyOffers.pick(42, 1, 0, 3, BountyDefinitions.all());
         helper.assertTrue(first.size() == 3, "three offers are shown");
         helper.assertTrue(first.stream().map(BountyOffers.Offer::entityId).distinct().count() == 3, "offers are distinct");
         helper.assertTrue(first.equals(again), "the same period gives the same offers");
         boolean anyDifferent = false;
-        for (long period = 2; period <= 6; period++) anyDifferent |= !BountyOffers.pick(playerId, 42, period, 0, 3, BountyDefinitions.all()).equals(first);
+        for (long period = 2; period <= 6; period++) anyDifferent |= !BountyOffers.pick(42, period, 0, 3, BountyDefinitions.all()).equals(first);
         helper.assertTrue(anyDifferent, "later periods give different offers");
         boolean anyRerollDiffers = false;
-        for (int rerolls = 1; rerolls <= 5; rerolls++) anyRerollDiffers |= !BountyOffers.pick(playerId, 42, 1, rerolls, 3, BountyDefinitions.all()).equals(first);
+        for (int rerolls = 1; rerolls <= 5; rerolls++) anyRerollDiffers |= !BountyOffers.pick(42, 1, rerolls, 3, BountyDefinitions.all()).equals(first);
         helper.assertTrue(anyRerollDiffers, "a reroll gives different offers in the same period");
+        ServerPlayer one = helper.makeMockServerPlayerInLevel();
+        ServerPlayer two = helper.makeMockServerPlayerInLevel();
+        long now = helper.getLevel().getGameTime();
+        helper.assertTrue(BountyOffers.current(one.server, now).equals(BountyOffers.current(two.server, now)), "the board is shared by every player");
         helper.succeed();
     }
 
@@ -76,7 +78,7 @@ public class BountyGameTests {
     public static void acceptingValidatesOffersActiveBountyAndCooldown(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         long now = helper.getLevel().getGameTime();
-        List<BountyOffers.Offer> offers = BountyOffers.forPlayer(player, now);
+        List<BountyOffers.Offer> offers = BountyOffers.current(player.server, now);
         ResourceLocation unoffered = BountyDefinitions.all().keySet().stream()
                 .filter(entityId -> offers.stream().noneMatch(offer -> offer.entityId().equals(entityId))).findFirst().orElseThrow();
         PlayerBounties.accept(player, unoffered);
@@ -102,7 +104,7 @@ public class BountyGameTests {
     public static void boardCommandsRerollAndClear(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         long now = helper.getLevel().getGameTime();
-        List<BountyOffers.Offer> before = BountyOffers.forPlayer(player, now);
+        List<BountyOffers.Offer> before = BountyOffers.current(player.server, now);
         PlayerBounties.accept(player, before.getFirst().entityId());
         PlayerBounties.abandon(player);
         helper.assertTrue(!PlayerBounties.state(player).canAccept(now), "abandoning leaves a cooldown");
@@ -111,11 +113,12 @@ public class BountyGameTests {
         Commands commands = helper.getLevel().getServer().getCommands();
         commands.performPrefixedCommand(source, "bestiary board clear @s");
         helper.assertTrue(PlayerBounties.state(player).canAccept(now), "board clear drops the cooldown");
-        helper.assertTrue(PlayerBounties.state(player).equals(BountyState.NONE), "a cleared, unrerolled player stores nothing");
+        helper.assertTrue(PlayerBounties.state(player).equals(BountyState.NONE), "a cleared player stores nothing");
 
-        commands.performPrefixedCommand(source, "bestiary board reroll @s");
-        helper.assertTrue(PlayerBounties.state(player).rerolls() == 1, "reroll salts the offers");
-        helper.assertTrue(!BountyOffers.forPlayer(player, now).equals(before), "rerolled postings differ");
+        int rerollsBefore = BoardRerolls.of(player.server).count();
+        commands.performPrefixedCommand(source, "bestiary board reroll");
+        helper.assertTrue(BoardRerolls.of(player.server).count() == rerollsBefore + 1, "reroll bumps the world counter");
+        helper.assertTrue(!BountyOffers.current(player.server, now).equals(before), "rerolled postings differ for everyone");
         helper.succeed();
     }
 
@@ -141,7 +144,7 @@ public class BountyGameTests {
     @SuppressWarnings("removal")
     public static void bountyStateSurvivesSavingAndDeath(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        BountyState state = new BountyState(Optional.of(new BountyState.ActiveBounty(ZOMBIE, 5, 2)), 900, 1);
+        BountyState state = new BountyState(Optional.of(new BountyState.ActiveBounty(ZOMBIE, 5, 2)), 900);
         player.setData(PlayerBounties.STATE, state);
         CompoundTag saved = player.saveWithoutId(new CompoundTag());
         ServerPlayer loaded = helper.makeMockServerPlayerInLevel();

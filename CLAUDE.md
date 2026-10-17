@@ -178,7 +178,7 @@ src/main/java/net/silvertide/beasts_and_bounties/
     BountyConfig                refresh period, offers shown, claim/abandon cooldowns, allowAbandon
     BountyDefinition, BountyReward   one bounty per entity: kills, weight, bonus_kills, item/experience rewards
     BountyDefinitions           SimpleJsonResourceReloadListener over data/<ns>/bounty (top pack wins)
-    BountyOffers                deterministic weighted picks per (player, world seed, refresh period)
+    BountyOffers, BoardRerolls  deterministic weighted picks per (world seed, refresh period, world reroll count); the shared board
     BountyState                 record(active bounty?, cooldownEndsAt) with the accept/kill/end rules
     PlayerBounties              player attachment; openBoard / accept / abandon / recordKill / complete
     BountyEvents                reload listener, join sync, death → recordKill for every participant
@@ -544,6 +544,9 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   across worlds, and switching or stopping clears the last ping text and wisp at once.
 - **Names**: tracking text uses `BestiaryEntry.displayName`, the same `???` gating as the book, so a
   pack that unlocks tracking before the name reveals nothing early.
+  **Bounty text is the exception**: the poster, "Bounty accepted" and the Bounty Claimed toast use
+  the entity type's own name (`EntityType.getDescription()`) whatever the player has learned,
+  because a board asking you to slay "???" makes no sense; the poster's model is shown too.
 - **Vanilla pack placement** (kills for P1, P2, A1, P3, A2, A3):
   - normal: 25, 60, 100, 150, 200, 250
   - elite: 12, 35, 60, 90, 110, 150
@@ -565,9 +568,9 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
 - `/bestiary get <target> <entity>` prints kills, bounties and milestone `n of m`.
 - `/bestiary complete <targets> [entity]` raises progress to the final milestone's requirement (never
   lowers it) for one entry or every loaded entry. Use it to test a maxed-out bestiary.
-- `/bestiary board reroll <targets>` gives the targets new postings now (a saved `rerolls` counter
-  salts the offer seed), and `/bestiary board clear <targets>` drops their active bounty and
-  cooldown. Registered by `BountyCommand`; Brigadier merges its `bestiary` literal with the
+- `/bestiary board reroll` gives **everyone** new postings now (the world-wide `BoardRerolls`
+  saved-data counter salts the offer seed), and `/bestiary board clear <targets>` drops the
+  targets' active bounty and cooldown. Registered by `BountyCommand`; Brigadier merges its `bestiary` literal with the
   bestiary feature's.
 
 Counts clamp to 0 and `Integer.MAX_VALUE`. Entity suggestions come from the loaded entries. Every
@@ -652,8 +655,10 @@ There is no datagen and no `data` run config.
 ### Bounties (`feature/bounty/`)
 
 A **bounty board** block (a free-standing sign on a post: `BountyBoardBlock`, a
-`HorizontalDirectionalBlock` with no block entity) posts hunts. Everything is **per player**; the
-board is only where you look. One bounty is active at a time.
+`HorizontalDirectionalBlock` with no block entity) posts hunts. **The postings are shared by the
+whole server** (one daily board, so friends simply take the same posting; there is no party or
+team system), while progress, the active bounty and cooldowns are **per player**. The board block
+is only where you look. One bounty is active at a time.
 
 - **Data**: `data/<ns>/bounty/<entity_path>.json`, path-is-the-id like entries, loaded by a
   `SimpleJsonResourceReloadListener` (**top pack wins, no merging**). Fields: `kills` (default 3),
@@ -665,12 +670,14 @@ board is only where you look. One bounty is active at a time.
   and bosses only: normal 5 kills / weight 10 / +4 bonus / 3 emeralds + 60 XP; elite 3 / 4 / +2 /
   6 + 120; minor boss 1 / 2 / +2 / 16 + 300; major boss 1 / 1 / +1 / 32 + 600.
 - **Offers** (`BountyOffers.pick`): `offersShown` distinct weighted picks from a `RandomSource`
-  seeded by player UUID, world seed, `gameTime / refreshTicks` and the player's `rerolls` count, so the same period always gives
-  the same postings and nothing is stored. The server sends them when the board opens
+  seeded by the overworld seed, `gameTime / refreshTicks` and the world's reroll count
+  (`BoardRerolls`, a `SavedData` on the overworld, bumped only by the admin command), so the same
+  period gives every player the same postings and nothing per player is stored. The server sends them when the board opens
   (`BoardOpened(offers, periodEndsAt, state)`, each offer carrying the kills, item stacks, XP and
   habitat text the card shows) and recomputes them to validate `AcceptBounty`.
 - **State**: attachment `bounty` = `BountyState(Optional<ActiveBounty(entityId, killsRequired,
-  killsSoFar)>, cooldownEndsAt)`, serialized, `copyOnDeath`; absent = `NONE`. Rules are pure:
+  killsSoFar)>, cooldownEndsAt)`, serialized, `copyOnDeath`; absent = `NONE`. (An old save's
+  `rerolls` field is ignored by the codec.) Rules are pure:
   `canAccept(now)`, `accepted`, `killRecorded` (only for the matching creature), `ended(now,
   cooldown)`. Accept needs no active bounty and an elapsed cooldown. Abandon (`allowAbandon`) and
   completion both end the bounty with their own cooldown (`abandonCooldownMinutes`,
@@ -719,7 +726,7 @@ board is only where you look. One bounty is active at a time.
   ("Rewards:", the XP lines, then "3× Emerald" lines) above the "Last seen:" habitat. N is experience **points** (`giveExperiencePoints`), not levels, because a
   level's cost depends on the player's current level. A line with nothing to show is left out. The bottom of the paper is left clear. Hovering a poster swaps in `bounty_card_highlighted`, scales it
   up 10% about its centre and pushes its drop shadow from 2 px to 4 px (the shadow is the paper's own silhouette, drawn black and offset down-right, so the ragged edge casts a matching shadow) and only
-  then **fades the reward details to 25%** (everything under the Rewards heading: the XP line and item rows; the paper's own region is blitted back over them at 75% alpha, translated to z 200 so it passes the depth test against the items drawn at z 150) and shows its Accept action centred in that faded area: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 3/4 size (66×12) inside the hover-scaled pose; the click area is that rectangle mapped through the hover scale (`isOverButton`). The model stays untouched. The active poster uses `abandon_text` (92×16, drawn 69×12) the same way. The bottom of the paper below the reward line is free.
+  then **fades the reward details to 25%** (everything under the Rewards heading: the XP line and item rows; the paper's own region is blitted back over them at 75% alpha, translated to z 300 so it passes the depth test against the items drawn at z 150 and their stack counts at z 200) and shows its Accept action centred in that faded area: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 3/4 size (66×12) inside the hover-scaled pose; the click area is that rectangle mapped through the hover scale (`isOverButton`). The model stays untouched. The active poster uses `abandon_text` (92×16, drawn 69×12) the same way. The bottom of the paper below the reward line is free.
   Hovering a poster shows the creature's **habitat lines from its entry's full knowledge** (a
   poster says where it was seen, whatever the player has unlocked) in a `Tooltips` tooltip headed
   "Last seen:"; there is no room on the paper. The model faces the viewer (yaw 180 + 25: in this

@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 
-public record BountyState(Optional<ActiveBounty> active, long cooldownEndsAt, int rerolls) {
+public record BountyState(Optional<ActiveBounty> active, long cooldownEndsAt) {
     public record ActiveBounty(ResourceLocation entityId, int killsRequired, int killsSoFar) {
         static final Codec<ActiveBounty> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 ResourceLocation.CODEC.fieldOf("entity").forGetter(ActiveBounty::entityId),
@@ -29,39 +29,33 @@ public record BountyState(Optional<ActiveBounty> active, long cooldownEndsAt, in
 
     public static final Codec<BountyState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ActiveBounty.CODEC.optionalFieldOf("active").forGetter(BountyState::active),
-            Codec.LONG.optionalFieldOf("cooldown_ends_at", 0L).forGetter(BountyState::cooldownEndsAt),
-            Codec.INT.optionalFieldOf("rerolls", 0).forGetter(BountyState::rerolls)
+            Codec.LONG.optionalFieldOf("cooldown_ends_at", 0L).forGetter(BountyState::cooldownEndsAt)
     ).apply(instance, BountyState::new));
     public static final StreamCodec<ByteBuf, BountyState> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.optional(ActiveBounty.STREAM_CODEC), BountyState::active,
             ByteBufCodecs.VAR_LONG, BountyState::cooldownEndsAt,
-            ByteBufCodecs.VAR_INT, BountyState::rerolls,
             BountyState::new);
-    public static final BountyState NONE = new BountyState(Optional.empty(), 0, 0);
+    public static final BountyState NONE = new BountyState(Optional.empty(), 0);
 
     public boolean canAccept(long now) {
         return active.isEmpty() && now >= cooldownEndsAt;
     }
 
     public BountyState accepted(ResourceLocation entityId, int killsRequired) {
-        return new BountyState(Optional.of(new ActiveBounty(entityId, killsRequired, 0)), cooldownEndsAt, rerolls);
+        return new BountyState(Optional.of(new ActiveBounty(entityId, killsRequired, 0)), cooldownEndsAt);
     }
 
     public Optional<BountyState> killRecorded(ResourceLocation entityId) {
         return active.filter(bounty -> bounty.entityId().equals(entityId) && !bounty.isComplete())
-                .map(bounty -> new BountyState(Optional.of(new ActiveBounty(entityId, bounty.killsRequired(), bounty.killsSoFar() + 1)), cooldownEndsAt, rerolls));
+                .map(bounty -> new BountyState(Optional.of(new ActiveBounty(entityId, bounty.killsRequired(), bounty.killsSoFar() + 1)), cooldownEndsAt));
     }
 
     public BountyState ended(long now, long cooldownTicks) {
-        return new BountyState(Optional.empty(), now + cooldownTicks, rerolls);
-    }
-
-    public BountyState rerolled() {
-        return new BountyState(active, cooldownEndsAt, rerolls + 1);
+        return new BountyState(Optional.empty(), now + cooldownTicks);
     }
 
     public BountyState cleared() {
-        return new BountyState(Optional.empty(), 0, rerolls);
+        return new BountyState(Optional.empty(), 0);
     }
 
     public long ticksUntilReady(long now) {
@@ -69,6 +63,6 @@ public record BountyState(Optional<ActiveBounty> active, long cooldownEndsAt, in
     }
 
     public boolean isEmpty(long now) {
-        return active.isEmpty() && ticksUntilReady(now) == 0 && rerolls == 0;
+        return active.isEmpty() && ticksUntilReady(now) == 0;
     }
 }

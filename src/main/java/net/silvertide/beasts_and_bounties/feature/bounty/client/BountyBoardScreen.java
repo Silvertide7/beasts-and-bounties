@@ -17,7 +17,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
-import net.silvertide.beasts_and_bounties.feature.bestiary.client.ClientBestiary;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.GuiText;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.Tooltips;
 import net.silvertide.beasts_and_bounties.feature.bounty.BountyConfig;
@@ -77,7 +76,7 @@ final class BountyBoardScreen extends Screen {
     private static final float MODEL_FILL_FRACTION = 0.9f;
     private static final float MODEL_YAW_DEGREES = 180f + 25f;
     private static final float MODEL_Z = 50f;
-    private static final float ABOVE_MODEL_Z = 200f;
+    private static final float ABOVE_ITEM_COUNTS_Z = 300f;
     private static final int MAX_ITEM_ROWS = 2;
     private static final int FULL_BRIGHT = 15728880;
     private static final int TEXT_COLOR = 0x3B2A1A;
@@ -145,7 +144,7 @@ final class BountyBoardScreen extends Screen {
         Optional<BountyPayloads.Offer> offer = board.offers().stream().filter(candidate -> candidate.entityId().equals(entityId)).findFirst();
         int shownItems = offer.map(this::itemsThatFit).orElse(0);
         List<Component> tooltip = new ArrayList<>();
-        Component name = Component.literal(ClientBestiary.creatureName(entityId).getString().toUpperCase(Locale.ROOT)).withStyle(ChatFormatting.BOLD);
+        Component name = Component.literal(BuiltInRegistries.ENTITY_TYPE.get(entityId).getDescription().getString().toUpperCase(Locale.ROOT)).withStyle(ChatFormatting.BOLD);
         float nameScale = nameScaleToFit(name);
         FormattedCharSequence nameLine = name.getVisualOrderText();
         if (font.width(name) * nameScale > nameWidthAvailable()) {
@@ -276,7 +275,7 @@ final class BountyBoardScreen extends Screen {
             int detailsTop = y + rewardDetailsTop();
             int detailsBottom = y + CARD_HEIGHT - CARD_PADDING;
             graphics.pose().pushPose();
-            graphics.pose().translate(0, 0, ABOVE_MODEL_Z);
+            graphics.pose().translate(0, 0, ABOVE_ITEM_COUNTS_Z);
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.setShaderColor(1f, 1f, 1f, 1f - HOVERED_REWARDS_OPACITY);

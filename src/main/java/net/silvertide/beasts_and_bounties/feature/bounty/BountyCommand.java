@@ -20,8 +20,11 @@ final class BountyCommand {
                 .requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("board")
                         .then(Commands.literal("reroll")
-                                .then(Commands.argument("targets", EntityArgument.players())
-                                        .executes(context -> forEachTarget(context, PlayerBounties::reroll, "rerolled"))))
+                                .executes(context -> {
+                                    PlayerBounties.reroll(context.getSource().getServer());
+                                    context.getSource().sendSuccess(() -> Component.translatable("commands.beasts_and_bounties.board.rerolled"), true);
+                                    return 1;
+                                }))
                         .then(Commands.literal("clear")
                                 .then(Commands.argument("targets", EntityArgument.players())
                                         .executes(context -> forEachTarget(context, PlayerBounties::clear, "cleared"))))));
