@@ -43,14 +43,14 @@ final class TrackingHud {
     static final int PING_MARGIN = 20;
     private static final int PING_BOTTOM_OFFSET = 100;
     private static final int PING_LINE_HEIGHT = 10;
-    private static final int PING_COLOR = 0x000000;
+    private static final int PING_COLOR = 0xEADFC8;
     private static final long PING_FADE_MILLIS = 2000L;
     private static final int MIN_VISIBLE_ALPHA = 8;
     private static final int OPAQUE = 255;
     private static final int TIMER_SIZE = 8;
     private static final int TIMER_GAP = 3;
-    private static final int HUNT_TIMER_COLOR = 0x9CE07A;
-    private static final int HOLD_TEXT_COLOR = 0x000000;
+    private static final int HUNT_TIMER_COLOR = 0xEADFC8;
+    private static final int HOLD_TEXT_COLOR = 0xEADFC8;
     private static final int HOLD_BAR_WIDTH = 60;
     private static final int HOLD_BAR_HEIGHT = 2;
     private static final int HOLD_BAR_GAP = 3;
@@ -140,7 +140,7 @@ final class TrackingHud {
         int x = (graphics.guiWidth() - width) / 2;
         int y = compassCenterY(graphics) - RING_SIZE / 2 - HUNT_TIMER_GAP_ABOVE_RING - TIMER_SIZE;
         graphics.blitSprite(TIMER_SPRITE, x, y, TIMER_SIZE, TIMER_SIZE);
-        graphics.drawString(minecraft.font, seconds, x + TIMER_SIZE + TIMER_GAP, y, HUNT_TIMER_COLOR, true);
+        graphics.drawString(minecraft.font, seconds, x + TIMER_SIZE + TIMER_GAP, y, HUNT_TIMER_COLOR, false);
     }
 
     private static void renderHold(GuiGraphics graphics, Minecraft minecraft) {

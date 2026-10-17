@@ -193,7 +193,7 @@ src/main/resources/
   beasts_and_bounties_logo.png  mod list logo (logoFile in mods.toml, logoBlur=false for pixel art); copy of bestiary_logo.png at the repo root
   assets/beasts_and_bounties/   lang, item model + texture, GUI spread + sprites
   builtin_data_packs/vanilla_bestiary/   built-in datapack: data/minecraft/bestiary/ (54 entries: hostile mobs, bosses, and livestock/fish players normally kill) and data/minecraft/bounty/ (38 bounties: hostiles and bosses only), pack.png
-  data/beasts_and_bounties/recipe/      bestiary (book + bone), bounty_board (oak sign + paper); loot_table/blocks/bounty_board
+  data/beasts_and_bounties/recipe/      bestiary (shaped: leather over book over bone), bounty_board (shaped: three paper over any sign over a stick); loot_table/blocks/bounty_board
 src/gametest/                   gametests + the empty structure template; loaded by dev runs, not in the jar
 ```
 
@@ -346,7 +346,7 @@ There is no attachment sync on NeoForge 21.1, so it is done by hand:
 
 ### The book
 
-- A `bestiary` item. Right-click opens `BestiaryScreen`. Crafted shapeless from book + bone. Kills
+- A `bestiary` item. Right-click opens `BestiaryScreen`. Crafted shaped: leather over a book over a bone, one column. Kills
   are tracked whether or not the player has the book.
 - On the left, the paged list of discovered entries (no discovered count for now). On the right,
   the selected entry: name, model, type, stats, description, strengths, weaknesses, habitat, notes,
@@ -496,9 +496,10 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   `beasts_and_bounties.tracking.mixins.json`: `MinecraftMixin.shouldEntityAppearGlowing` turns it
   on, and `EntityMixin.getTeamColor` tints the outline blood-red (`ClientTracking.GLOW_COLOR`,
   `0xFF5A5A`) so it reads as the bestiary's and not a spectral arrow.
-- **HUD text colour.** The ping text and the hold text ("Searching for the Skeleton's trail") are
-  black with **no drop shadow**, by the user's choice. The hold bar fill stays vanilla gold
-  (`0xFFAA00`) and the hunt timer keeps its green with a shadow.
+- **HUD text colour.** The ping text, the hold text ("Searching for the Skeleton's trail") and the hunt timer's seconds are
+  a light parchment off-white (`0xEADFC8`) with **no drop shadow**, by the user's choice (pale
+  yellow vanished on bright scenes, black on dark ones). The hold bar fill stays vanilla gold
+  (`0xFFAA00`).
 - **Transient text.** One-line messages (hold refusals, the server's fallback messages) use the
   action bar (`Gui.setOverlayMessage`). **Pings are drawn by the HUD itself**, because the action
   bar neither wraps nor stays longer than 3 s: the ping is wrapped once on receive
@@ -766,8 +767,8 @@ is only where you look. One bounty is active at a time.
   sign scale so the whole thing fits in one block: post 2×8, board 16×8 on top (y 8–16). The
   selection shape is post ∪ board, and **only a click on the board opens the menu**
   (`useWithoutItem` checks the hit's y against the board bottom and passes otherwise); a block's
-  shape can't extend into the block above, which is why the sign had to fit in one. Drops itself; crafted from oak sign +
-  paper; Functional Blocks tab.
+  shape can't extend into the block above, which is why the sign had to fit in one. Drops itself; crafted shaped from three paper across
+  the top, any sign (`#minecraft:signs`) in the middle and a stick below; Functional Blocks tab.
 
 ## Roadmap
 
