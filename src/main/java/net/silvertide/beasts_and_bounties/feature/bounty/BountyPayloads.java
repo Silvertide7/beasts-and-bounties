@@ -29,12 +29,13 @@ public final class BountyPayloads {
         registrar.playToClient(BountyClaimed.TYPE, BountyClaimed.STREAM_CODEC, (payload, context) -> ClientBounties.claimed(payload.entityId()));
     }
 
-    public record Offer(ResourceLocation entityId, int kills, List<ItemStack> items, int experience, List<Component> habitat) {
+    public record Offer(ResourceLocation entityId, int kills, List<ItemStack> items, int experience, List<Component> skillExperience, List<Component> habitat) {
         static final StreamCodec<RegistryFriendlyByteBuf, Offer> STREAM_CODEC = StreamCodec.composite(
                 ResourceLocation.STREAM_CODEC, Offer::entityId,
                 ByteBufCodecs.VAR_INT, Offer::kills,
                 ItemStack.OPTIONAL_STREAM_CODEC.apply(ByteBufCodecs.list()), Offer::items,
                 ByteBufCodecs.VAR_INT, Offer::experience,
+                ComponentSerialization.STREAM_CODEC.apply(ByteBufCodecs.list()), Offer::skillExperience,
                 ComponentSerialization.STREAM_CODEC.apply(ByteBufCodecs.list()), Offer::habitat,
                 Offer::new);
     }

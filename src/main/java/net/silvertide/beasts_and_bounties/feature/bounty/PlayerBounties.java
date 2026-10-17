@@ -53,9 +53,16 @@ public final class PlayerBounties {
                 .orElseGet(() -> BountyOffers.forPlayer(player, now));
         List<BountyPayloads.Offer> offers = shown.stream()
                 .map(offer -> new BountyPayloads.Offer(offer.entityId(), offer.definition().kills(), offer.definition().itemRewards(),
-                        offer.definition().experienceReward(), lastSeen(offer.entityId())))
+                        offer.definition().experienceReward(), skillExperienceLines(offer.definition()), lastSeen(offer.entityId())))
                 .toList();
         Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state));
+    }
+
+    private static List<Component> skillExperienceLines(BountyDefinition definition) {
+        if (!PmmoBridge.isLoaded()) return List.of();
+        return definition.skillExperienceRewards().stream()
+                .map(reward -> (Component) Component.translatable("gui.beasts_and_bounties.board.skill_experience", reward.amount(), Component.translatable("pmmo." + reward.skill())))
+                .toList();
     }
 
     private static List<Component> lastSeen(ResourceLocation entityId) {
@@ -106,6 +113,7 @@ public final class PlayerBounties {
         if (definition != null) {
             definition.itemRewards().forEach(stack -> ItemHandlerHelper.giveItemToPlayer(player, stack.copy()));
             if (definition.experienceReward() > 0) player.giveExperiencePoints(definition.experienceReward());
+            if (PmmoBridge.isLoaded()) definition.skillExperienceRewards().forEach(reward -> PmmoBridge.addSkillExperience(player, reward));
         }
         BestiaryEntry entry = BestiaryEntries.get(bounty.entityId());
         if (entry != null) {

@@ -2,7 +2,10 @@ package net.silvertide.beasts_and_bounties.feature.bounty;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import com.google.gson.JsonObject;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -36,6 +39,18 @@ public class BountyGameTests {
         BountyDefinitions.all().keySet().forEach(entityId -> helper.assertTrue(BestiaryEntries.get(entityId) != null, entityId + " has a bounty but no entry"));
         BountyDefinition zombie = BountyDefinitions.all().get(ZOMBIE);
         helper.assertTrue(zombie.kills() == 5 && zombie.bonusKills() == 4 && zombie.experienceReward() == 60 && zombie.itemRewards().getFirst().is(Items.EMERALD), "zombie bounty values");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void skillExperienceRewardsParse(GameTestHelper helper) {
+        JsonObject json = GsonHelper.parse("""
+                {"rewards": [{"type": "pmmo_xp", "xp": "combat/50"}, {"type": "experience", "amount": 10}]}
+                """);
+        BountyDefinition definition = BountyDefinition.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+        List<BountyReward.SkillExperience> skills = definition.skillExperienceRewards();
+        helper.assertTrue(skills.size() == 1 && skills.getFirst().skill().equals("combat") && skills.getFirst().amount() == 50, "pmmo_xp parses skill/amount");
+        helper.assertTrue(definition.experienceReward() == 10 && definition.itemRewards().isEmpty(), "other rewards unaffected");
         helper.succeed();
     }
 

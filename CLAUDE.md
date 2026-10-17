@@ -658,7 +658,8 @@ board is only where you look. One bounty is active at a time.
 - **Data**: `data/<ns>/bounty/<entity_path>.json`, path-is-the-id like entries, loaded by a
   `SimpleJsonResourceReloadListener` (**top pack wins, no merging**). Fields: `kills` (default 3),
   `weight` (default 10), `bonus_kills` (default 0) and `rewards`, a `type` dispatch of `item`
-  (`item`, `count`) and `experience` (`amount`). A file whose entity doesn't exist is skipped with a
+  (`item`, `count`), `experience` (`amount`) and `pmmo_xp` (`xp`: `"fishing/1000"`, a Project MMO skill and
+  the XP to give it, see the PMMO bridge below). A file whose entity doesn't exist is skipped with a
   WARN; one whose entity has **no bestiary entry** loads but is never offered (checked at offer
   time, because reload-listener order isn't guaranteed). Shipped in the vanilla pack for hostiles
   and bosses only: normal 5 kills / weight 10 / +4 bonus / 3 emeralds + 60 XP; elite 3 / 4 / +2 /
@@ -681,6 +682,18 @@ board is only where you look. One bounty is active at a time.
   claim cooldown, the mod's `bounty.claimed` sound (delegates to vanilla's villager "yes", volume
   0.6) and a `BountyClaimed` payload for the client toast. **Accepting changes nothing in the
   book**; the kill and the bonus kills do.
+- **PMMO bridge** (`PmmoBridge`): Project MMO is an **optional** dependency (`compileOnly`
+  `curse.maven:pmmo-353935:8800342` = PMMO 2.10.47, `type="optional"` in the mods.toml, not on
+  the dev runtime). A `pmmo_xp` reward (`"xp": "skill/amount"`) is given on completion through `Core.get(level).getData().addXp(uuid,
+  skill, amount)` only when PMMO is loaded (`ModList.isLoaded`, read once into a static final on first use); without PMMO the reward parses and is
+  silently skipped. `PmmoBridge.awardCraftExperienceFor(player, stack)` posts a NeoForge `ItemCraftedEvent` with an
+  empty crafting grid, which PMMO's `CraftHandler` turns into that item's configured craft XP
+  (the same trick as the farmers/vinery compats); it is kept for a future reward and has no
+  caller yet, by the user's choice. `PmmoBridge` is the only class that imports `harmonised.*`, and it is reached
+  only behind `PmmoBridge.isLoaded()` so the class never loads without the mod. With PMMO
+  present the server sends each skill reward as a ready-made "1000 Fishing" line (the skill name
+  via PMMO's own `pmmo.<skill>` lang key). The poster draws them on the experience line after "+60 XP". The shipped pack grants none; it is for
+  packs that run PMMO.
 - **Config** (`beasts_and_bounties-bounty-server.toml`): `refreshMinecraftDays` (1.0),
   `offersShown` (3, 1–3), `claimCooldownMinutes` (10), `abandonCooldownMinutes` (20),
   `allowAbandon` (true), `showLastSeen` (false: when off the server sends no habitat, so the
@@ -697,17 +710,16 @@ board is only where you look. One bounty is active at a time.
   with "..." and the full name put at the top of the poster's hover tooltip; shorter text is
   vertically centred on the body-scale line)
   and "Slay N" (0.9 × body scale). Below that, laid out line by line from "Slay N" down, the
-  rewards: the hand-painted `reward_text` heading (58×16, drawn 44×12, centred), then one centred
-  line in detail text (0.9 × `GuiText.pixelSnappedSmallScale`): "N XP" first (there is only ever
-  one experience total, drawn at the unshrunk small scale), a 3 px gap, then the item rewards as
-  8 px icons (`renderItem` + `renderItemDecorations`, so the count sits on the icon like a stack).
-  The group is centred as a whole, not spread out. When the icons would overrun the paper
-  (`itemsThatFit`, computed once per poster), the line shows as many as fit followed by "+N", and
-  the poster's hover tooltip lists every reward ("Rewards:", the XP, then "3× Emerald" lines)
-  above the "Last seen:" habitat. N is experience **points** (`giveExperiencePoints`), not levels, because a
-  level's cost depends on the player's current level. A line with nothing to show is left out. The bottom of the paper is left for the hover-only button. Hovering a poster swaps in `bounty_card_highlighted`, scales it
+  rewards: the hand-painted `reward_text` heading (58×16, drawn 44×12, centred), then two parts: an
+  **experience line** (small scale, centred) with "+60 XP" and, with PMMO, each skill reward as
+  "+1000 Fishing XP" beside it; then the **item rows**: 8 px icons (`renderItem` +
+  `renderItemDecorations`, so the count sits on the icon like a stack), centred, up to 9 a row
+  and at most two rows. Past that (`itemsThatFit`, computed once per poster) the last row ends
+  with "+N" in detail text (0.9 × small scale) and the poster's hover tooltip lists every reward
+  ("Rewards:", the XP lines, then "3× Emerald" lines) above the "Last seen:" habitat. N is experience **points** (`giveExperiencePoints`), not levels, because a
+  level's cost depends on the player's current level. A line with nothing to show is left out. The bottom of the paper is left clear. Hovering a poster swaps in `bounty_card_highlighted`, scales it
   up 10% about its centre and pushes its drop shadow from 2 px to 4 px (the shadow is the paper's own silhouette, drawn black and offset down-right, so the ragged edge casts a matching shadow) and only
-  then shows its Accept action: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 3/4 size (66×12) and centred; the drawn sprite is the click area. The active poster uses `abandon_text` (92×16, drawn 69×12) the same way.
+  then **fades the reward details to 25%** (everything under the Rewards heading: the XP line and item rows; the paper's own region is blitted back over them at 75% alpha, translated to z 200 so it passes the depth test against the items drawn at z 150) and shows its Accept action centred in that faded area: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 3/4 size (66×12) inside the hover-scaled pose; the click area is that rectangle mapped through the hover scale (`isOverButton`). The model stays untouched. The active poster uses `abandon_text` (92×16, drawn 69×12) the same way. The bottom of the paper below the reward line is free.
   Hovering a poster shows the creature's **habitat lines from its entry's full knowledge** (a
   poster says where it was seen, whatever the player has unlocked) in a `Tooltips` tooltip headed
   "Last seen:"; there is no room on the paper. The model faces the viewer (yaw 180 + 25: in this

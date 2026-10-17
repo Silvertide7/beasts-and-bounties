@@ -94,6 +94,13 @@ config="${mod_id}.tracking.mixins.json"
 #openGLVersion="[3.2,)"
 
 [[dependencies.${mod_id}]]
+    modId="pmmo"
+    type="optional"
+    versionRange="[2.10.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
     modId="silver_lib"
     type="required"
     versionRange="[1.2.2,)"

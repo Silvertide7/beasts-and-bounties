@@ -63,12 +63,12 @@ final class BountyBoardScreen extends Screen {
     private static final int ITEM_ICON_NATIVE_SIZE = 16;
     private static final int ITEM_ICON_DRAWN_SIZE = 8;
     private static final int ITEM_GAP = 1;
-    private static final int DETAIL_RAISE = 1;
+    private static final int DETAIL_RAISE = -2;
     private static final int XP_TO_ITEMS_GAP = 3;
     private static final int REWARDS_HEADING_LOWER = -1;
     private static final int REWARD_TEXT_COLOR = 0x000000;
     private static final int BUTTON_HEIGHT = 12;
-    private static final int BUTTON_BOTTOM_MARGIN = 4;
+    private static final float HOVERED_REWARDS_OPACITY = 0.25f;
     private static final float HOVERED_SCALE = 1.1f;
     private static final float SHADOW_ALPHA = 0.6f;
     private static final int SHADOW_OFFSET = 2;
@@ -77,6 +77,8 @@ final class BountyBoardScreen extends Screen {
     private static final float MODEL_FILL_FRACTION = 0.9f;
     private static final float MODEL_YAW_DEGREES = 180f + 25f;
     private static final float MODEL_Z = 50f;
+    private static final float ABOVE_MODEL_Z = 200f;
+    private static final int MAX_ITEM_ROWS = 2;
     private static final int FULL_BRIGHT = 15728880;
     private static final int TEXT_COLOR = 0x3B2A1A;
     private static final int FOOTER_COLOR = 0xE6D3A3;
@@ -155,6 +157,7 @@ final class BountyBoardScreen extends Screen {
         if (offer.isPresent() && shownItems < offer.get().items().size()) {
             tooltip.add(Component.translatable("gui.beasts_and_bounties.board.rewards_tooltip").withStyle(ChatFormatting.GRAY));
             if (offer.get().experience() > 0) tooltip.add(Component.translatable("gui.beasts_and_bounties.board.experience", offer.get().experience()));
+            tooltip.addAll(offer.get().skillExperience());
             for (ItemStack stack : offer.get().items()) tooltip.add(Component.translatable("gui.beasts_and_bounties.board.item_line", stack.getCount(), stack.getHoverName()));
         }
         List<Component> habitat = offer.map(BountyPayloads.Offer::habitat).orElse(List.of());
@@ -177,18 +180,27 @@ final class BountyBoardScreen extends Screen {
         return Math.max(snappedFit, GuiText.pixelSnappedSmallScale());
     }
 
+    private static int itemsPerRow() {
+        return (CARD_WIDTH - 2 * CARD_PADDING + ITEM_GAP) / (ITEM_ICON_DRAWN_SIZE + ITEM_GAP);
+    }
+
     private int itemsThatFit(BountyPayloads.Offer offer) {
         int total = offer.items().size();
-        float available = CARD_WIDTH - 2 * CARD_PADDING - experienceWidth(offer);
-        if (itemsWidth(total) <= available) return total;
-        for (int shown = total - 1; shown > 0; shown--) {
-            if (itemsWidth(shown) + ITEM_GAP + font.width(moreText(total - shown)) * detailScale <= available) return shown;
+        int capacity = itemsPerRow() * MAX_ITEM_ROWS;
+        if (total <= capacity) return total;
+        float lastRowAvailable = CARD_WIDTH - 2 * CARD_PADDING;
+        for (int shown = capacity - 1; shown > 0; shown--) {
+            int onLastRow = shown - itemsPerRow() * (MAX_ITEM_ROWS - 1);
+            if (itemsWidth(onLastRow) + ITEM_GAP + font.width(moreText(total - shown)) * detailScale <= lastRowAvailable) return shown;
         }
         return 0;
     }
 
-    private float experienceWidth(BountyPayloads.Offer offer) {
-        return offer.experience() > 0 ? font.width(experienceText(offer)) * experienceScale + XP_TO_ITEMS_GAP : 0;
+    private List<Component> experienceLine(BountyPayloads.Offer offer) {
+        List<Component> parts = new ArrayList<>();
+        if (offer.experience() > 0) parts.add(experienceText(offer));
+        parts.addAll(offer.skillExperience());
+        return parts;
     }
 
     private static float itemsWidth(int count) {
@@ -259,27 +271,59 @@ final class BountyBoardScreen extends Screen {
         drawScaledAt(graphics, poster.nameLine(), poster.centerX() - font.width(poster.nameLine()) * poster.nameScale() / 2, nameY, poster.nameScale(), TEXT_COLOR);
         drawCenteredScaled(graphics, task, poster.centerX(), y + TASK_Y, slayScale, TEXT_COLOR);
         if (rewards != null) renderRewards(graphics, poster, rewards, y + TASK_Y + GLYPH_HEIGHT * slayScale + LINE_GAP);
-        graphics.pose().popPose();
         PosterButton button = posterButton();
         if (hovered && button != null) {
+            int detailsTop = y + rewardDetailsTop();
+            int detailsBottom = y + CARD_HEIGHT - CARD_PADDING;
+            graphics.pose().pushPose();
+            graphics.pose().translate(0, 0, ABOVE_MODEL_Z);
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.setShaderColor(1f, 1f, 1f, 1f - HOVERED_REWARDS_OPACITY);
+            graphics.blitSprite(cardSprite, CARD_WIDTH, CARD_HEIGHT, CARD_PADDING, rewardDetailsTop(), x + CARD_PADDING, detailsTop, CARD_WIDTH - 2 * CARD_PADDING, detailsBottom - detailsTop);
+            RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+            RenderSystem.disableBlend();
             ResourceLocation sprite = isOverButton(mouseX, mouseY, poster) ? button.highlightedSprite : button.sprite;
-            blitBlended(graphics, sprite, buttonX(poster, button), buttonY(), button.width, BUTTON_HEIGHT);
+            blitBlended(graphics, sprite, poster.centerX() - button.width / 2, y + buttonTop(), button.width, BUTTON_HEIGHT);
+            graphics.pose().popPose();
         }
+        graphics.pose().popPose();
+    }
+
+    private int rewardDetailsTop() {
+        return Math.round(TASK_Y + GLYPH_HEIGHT * slayScale + LINE_GAP + REWARDS_HEADING_LOWER + REWARDS_DRAWN_HEIGHT + LINE_GAP - DETAIL_RAISE);
+    }
+
+    private int buttonTop() {
+        return (rewardDetailsTop() + CARD_HEIGHT - CARD_PADDING - BUTTON_HEIGHT) / 2;
     }
 
     private void renderRewards(GuiGraphics graphics, Poster poster, BountyPayloads.Offer offer, float y) {
         y += REWARDS_HEADING_LOWER;
         blitBlended(graphics, REWARDS_SPRITE, poster.centerX() - REWARDS_DRAWN_WIDTH / 2, Math.round(y), REWARDS_DRAWN_WIDTH, REWARDS_DRAWN_HEIGHT);
         y += REWARDS_DRAWN_HEIGHT + LINE_GAP - DETAIL_RAISE;
+        List<Component> experience = experienceLine(offer);
+        if (!experience.isEmpty()) {
+            float width = -XP_TO_ITEMS_GAP;
+            for (Component part : experience) width += font.width(part) * experienceScale + XP_TO_ITEMS_GAP;
+            float x = poster.centerX() - width / 2;
+            for (Component part : experience) {
+                drawScaledAt(graphics, part, x, y, experienceScale);
+                x += font.width(part) * experienceScale + XP_TO_ITEMS_GAP;
+            }
+            y += GLYPH_HEIGHT * experienceScale + LINE_GAP;
+        }
         List<ItemStack> shown = offer.items().subList(0, poster.shownItems());
         int hidden = offer.items().size() - shown.size();
-        Component more = moreText(hidden);
-        float experienceWidth = experienceWidth(offer);
-        float moreWidth = hidden > 0 ? ITEM_GAP + font.width(more) * detailScale : 0;
-        float x = poster.centerX() - (experienceWidth + itemsWidth(shown.size()) + moreWidth) / 2;
-        if (offer.experience() > 0) drawScaledAt(graphics, experienceText(offer), x, y + (ITEM_ICON_DRAWN_SIZE - GLYPH_HEIGHT * experienceScale) / 2, experienceScale);
-        renderItemRow(graphics, x + experienceWidth, shown, y);
-        if (hidden > 0) drawSmall(graphics, more, x + experienceWidth + itemsWidth(shown.size()) + ITEM_GAP, y + (ITEM_ICON_DRAWN_SIZE - GLYPH_HEIGHT * detailScale) / 2);
+        for (int start = 0; start < shown.size(); start += itemsPerRow()) {
+            List<ItemStack> row = shown.subList(start, Math.min(shown.size(), start + itemsPerRow()));
+            boolean lastRow = start + itemsPerRow() >= shown.size();
+            float moreWidth = lastRow && hidden > 0 ? ITEM_GAP + font.width(moreText(hidden)) * detailScale : 0;
+            float x = poster.centerX() - (itemsWidth(row.size()) + moreWidth) / 2;
+            renderItemRow(graphics, x, row, y);
+            if (lastRow && hidden > 0) drawSmall(graphics, moreText(hidden), x + itemsWidth(row.size()) + ITEM_GAP, y + (ITEM_ICON_DRAWN_SIZE - GLYPH_HEIGHT * detailScale) / 2);
+            y += ITEM_ICON_DRAWN_SIZE + ITEM_GAP;
+        }
     }
 
     private void renderItemRow(GuiGraphics graphics, float x, List<ItemStack> items, float y) {
@@ -394,15 +438,14 @@ final class BountyBoardScreen extends Screen {
 
     private boolean isOverButton(double mouseX, double mouseY, Poster poster) {
         PosterButton button = posterButton();
-        return button != null && isOver(mouseX, mouseY, buttonX(poster, button), buttonY(), button.width, BUTTON_HEIGHT);
-    }
-
-    private static int buttonX(Poster poster, PosterButton button) {
-        return poster.centerX() - button.width / 2;
-    }
-
-    private int buttonY() {
-        return cardTop() + CARD_HEIGHT - BUTTON_HEIGHT - BUTTON_BOTTOM_MARGIN;
+        if (button == null) return false;
+        float cardCenterY = cardTop() + CARD_HEIGHT / 2f;
+        float buttonCenterY = cardTop() + buttonTop() + BUTTON_HEIGHT / 2f;
+        float hoveredCenterY = cardCenterY + (buttonCenterY - cardCenterY) * HOVERED_SCALE;
+        float width = button.width * HOVERED_SCALE;
+        float height = BUTTON_HEIGHT * HOVERED_SCALE;
+        return mouseX >= poster.centerX() - width / 2 && mouseX < poster.centerX() + width / 2
+                && mouseY >= hoveredCenterY - height / 2 && mouseY < hoveredCenterY + height / 2;
     }
 
     private static boolean isOver(double mouseX, double mouseY, int x, int y, int width, int height) {

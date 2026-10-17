@@ -116,6 +116,7 @@ configurations {
 dependencies {
     compileOnly "curse.maven:silverlib-1691772:${silverlib_version}"
     localRuntime "curse.maven:silverlib-1691772:${silverlib_version}"
+    compileOnly "curse.maven:pmmo-353935:${pmmo_version}"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

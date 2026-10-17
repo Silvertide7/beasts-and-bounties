@@ -19,6 +19,10 @@ public record BountyDefinition(int kills, int weight, int bonusKills, List<Bount
         return rewards.stream().filter(BountyReward.Items.class::isInstance).map(reward -> ((BountyReward.Items) reward).stack()).toList();
     }
 
+    public List<BountyReward.SkillExperience> skillExperienceRewards() {
+        return rewards.stream().filter(BountyReward.SkillExperience.class::isInstance).map(BountyReward.SkillExperience.class::cast).toList();
+    }
+
     public int experienceReward() {
         return rewards.stream().filter(BountyReward.Experience.class::isInstance).mapToInt(reward -> ((BountyReward.Experience) reward).amount()).sum();
     }

@@ -1,6 +1,7 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -39,9 +40,36 @@ public sealed interface BountyReward {
         }
     }
 
+    record SkillExperience(String skill, long amount) implements BountyReward {
+        private static final String SEPARATOR = "/";
+        static final MapCodec<SkillExperience> CODEC = Codec.STRING.comapFlatMap(SkillExperience::parse, SkillExperience::serialized).fieldOf("xp");
+
+        private static DataResult<SkillExperience> parse(String text) {
+            int separator = text.lastIndexOf(SEPARATOR);
+            if (separator <= 0) return DataResult.error(() -> "expected skill/amount, got " + text);
+            try {
+                long amount = Long.parseLong(text.substring(separator + 1));
+                if (amount <= 0) return DataResult.error(() -> "amount must be positive: " + text);
+                return DataResult.success(new SkillExperience(text.substring(0, separator), amount));
+            } catch (NumberFormatException e) {
+                return DataResult.error(() -> "amount is not a whole number: " + text);
+            }
+        }
+
+        private String serialized() {
+            return skill + SEPARATOR + amount;
+        }
+
+        @Override
+        public Type type() {
+            return Type.PMMO_XP;
+        }
+    }
+
     enum Type implements StringRepresentable {
         ITEM("item"),
-        EXPERIENCE("experience");
+        EXPERIENCE("experience"),
+        PMMO_XP("pmmo_xp");
 
         static final Codec<Type> CODEC = StringRepresentable.fromEnum(Type::values);
 
@@ -55,6 +83,7 @@ public sealed interface BountyReward {
             return switch (this) {
                 case ITEM -> Items.CODEC;
                 case EXPERIENCE -> Experience.CODEC;
+                case PMMO_XP -> SkillExperience.CODEC;
             };
         }
 

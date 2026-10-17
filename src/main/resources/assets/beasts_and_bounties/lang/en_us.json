@@ -661,7 +661,7 @@
   "block.beasts_and_bounties.bounty_board": "Bounty Board",
   "gui.beasts_and_bounties.board.title": "Bounty Board",
   "gui.beasts_and_bounties.board.kills": "Slay %s",
-  "gui.beasts_and_bounties.board.experience": "%s XP",
+  "gui.beasts_and_bounties.board.experience": "+%s XP",
   "gui.beasts_and_bounties.board.cooldown": "More bounties should arrive in %s.",
   "gui.beasts_and_bounties.board.refresh": "New postings in %s.",
   "gui.beasts_and_bounties.time.minutes": "%s minutes",
@@ -686,5 +686,6 @@
   "gui.beasts_and_bounties.board.more_items": "+%s",
   "gui.beasts_and_bounties.board.rewards_tooltip": "Rewards:",
   "gui.beasts_and_bounties.board.item_line": "%s× %s",
-  "gui.beasts_and_bounties.board.ellipsis": "..."
+  "gui.beasts_and_bounties.board.ellipsis": "...",
+  "gui.beasts_and_bounties.board.skill_experience": "+%s %s XP"
 }
