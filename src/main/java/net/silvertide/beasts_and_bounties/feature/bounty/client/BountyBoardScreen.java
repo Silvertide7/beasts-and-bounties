@@ -49,7 +49,7 @@ final class BountyBoardScreen extends Screen {
     private static final int CARD_HEIGHT = 101;
     private static final int CARD_GAP = 12;
     private static final int CARD_PADDING = 3;
-    private static final int HEADING_Y = 7;
+    private static final int HEADING_Y = 6;
     private static final int WANTED_DRAWN_WIDTH = 43;
     private static final int WANTED_DRAWN_HEIGHT = 12;
     private static final int MODEL_BOX_TOP = 20;
@@ -68,7 +68,7 @@ final class BountyBoardScreen extends Screen {
     private static final int REWARDS_HEADING_LOWER = -1;
     private static final int REWARD_TEXT_COLOR = 0x000000;
     private static final int BUTTON_HEIGHT = 12;
-    private static final int BUTTON_BOTTOM_MARGIN = 5;
+    private static final int BUTTON_BOTTOM_MARGIN = 4;
     private static final float HOVERED_SCALE = 1.1f;
     private static final float SHADOW_ALPHA = 0.6f;
     private static final int SHADOW_OFFSET = 2;
@@ -98,7 +98,7 @@ final class BountyBoardScreen extends Screen {
         }
     }
 
-    private record Poster(ResourceLocation entityId, int x, FormattedCharSequence nameLine, List<Component> tooltip, int shownItems, @Nullable LivingEntity model) {
+    private record Poster(ResourceLocation entityId, int x, FormattedCharSequence nameLine, float nameScale, List<Component> tooltip, int shownItems, @Nullable LivingEntity model) {
         int centerX() {
             return x + CARD_WIDTH / 2;
         }
@@ -143,6 +143,15 @@ final class BountyBoardScreen extends Screen {
         Optional<BountyPayloads.Offer> offer = board.offers().stream().filter(candidate -> candidate.entityId().equals(entityId)).findFirst();
         int shownItems = offer.map(this::itemsThatFit).orElse(0);
         List<Component> tooltip = new ArrayList<>();
+        Component name = Component.literal(ClientBestiary.creatureName(entityId).getString().toUpperCase(Locale.ROOT)).withStyle(ChatFormatting.BOLD);
+        float nameScale = nameScaleToFit(name);
+        FormattedCharSequence nameLine = name.getVisualOrderText();
+        if (font.width(name) * nameScale > nameWidthAvailable()) {
+            Component ellipsis = Component.translatable("gui.beasts_and_bounties.board.ellipsis");
+            int widthForText = Math.round(nameWidthAvailable() / nameScale) - font.width(ellipsis);
+            nameLine = Component.literal(font.substrByWidth(name, widthForText).getString()).append(ellipsis).withStyle(ChatFormatting.BOLD).getVisualOrderText();
+            tooltip.add(name);
+        }
         if (offer.isPresent() && shownItems < offer.get().items().size()) {
             tooltip.add(Component.translatable("gui.beasts_and_bounties.board.rewards_tooltip").withStyle(ChatFormatting.GRAY));
             if (offer.get().experience() > 0) tooltip.add(Component.translatable("gui.beasts_and_bounties.board.experience", offer.get().experience()));
@@ -154,8 +163,18 @@ final class BountyBoardScreen extends Screen {
             tooltip.addAll(habitat);
         }
         Entity entity = BuiltInRegistries.ENTITY_TYPE.get(entityId).create(Minecraft.getInstance().level);
-        return new Poster(entityId, x, font.split(Component.literal(ClientBestiary.creatureName(entityId).getString().toUpperCase(Locale.ROOT)).withStyle(ChatFormatting.BOLD), (int) ((CARD_WIDTH - 2 * CARD_PADDING) / bodyScale)).getFirst(), tooltip,
-                shownItems, entity instanceof LivingEntity living ? living : null);
+        return new Poster(entityId, x, nameLine, nameScale, tooltip, shownItems, entity instanceof LivingEntity living ? living : null);
+    }
+
+    private static int nameWidthAvailable() {
+        return CARD_WIDTH - 2 * CARD_PADDING;
+    }
+
+    private float nameScaleToFit(Component name) {
+        if (font.width(name) * bodyScale <= nameWidthAvailable()) return bodyScale;
+        double guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        float snappedFit = (float) (Math.floor(nameWidthAvailable() / (double) font.width(name) * guiScale) / guiScale);
+        return Math.max(snappedFit, GuiText.pixelSnappedSmallScale());
     }
 
     private int itemsThatFit(BountyPayloads.Offer offer) {
@@ -236,7 +255,8 @@ final class BountyBoardScreen extends Screen {
         RenderSystem.disableBlend();
         blitBlended(graphics, WANTED_SPRITE, poster.centerX() - WANTED_DRAWN_WIDTH / 2, y + HEADING_Y, WANTED_DRAWN_WIDTH, WANTED_DRAWN_HEIGHT);
         renderModel(graphics, poster, y + MODEL_BOX_TOP);
-        drawScaled(graphics, poster.nameLine(), poster.centerX() - font.width(poster.nameLine()) * bodyScale / 2, y + NAME_Y, TEXT_COLOR);
+        float nameY = y + NAME_Y + (GLYPH_HEIGHT * bodyScale - GLYPH_HEIGHT * poster.nameScale()) / 2;
+        drawScaledAt(graphics, poster.nameLine(), poster.centerX() - font.width(poster.nameLine()) * poster.nameScale() / 2, nameY, poster.nameScale(), TEXT_COLOR);
         drawCenteredScaled(graphics, task, poster.centerX(), y + TASK_Y, slayScale, TEXT_COLOR);
         if (rewards != null) renderRewards(graphics, poster, rewards, y + TASK_Y + GLYPH_HEIGHT * slayScale + LINE_GAP);
         graphics.pose().popPose();
@@ -280,10 +300,14 @@ final class BountyBoardScreen extends Screen {
     }
 
     private void drawScaledAt(GuiGraphics graphics, Component text, float x, float y, float scale) {
+        drawScaledAt(graphics, text.getVisualOrderText(), x, y, scale, REWARD_TEXT_COLOR);
+    }
+
+    private void drawScaledAt(GuiGraphics graphics, FormattedCharSequence text, float x, float y, float scale, int color) {
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0);
         graphics.pose().scale(scale, scale, 1f);
-        graphics.drawString(font, text, 0, 0, REWARD_TEXT_COLOR, false);
+        graphics.drawString(font, text, 0, 0, color, false);
         graphics.pose().popPose();
     }
 
@@ -294,13 +318,6 @@ final class BountyBoardScreen extends Screen {
         RenderSystem.disableBlend();
     }
 
-    private void drawScaled(GuiGraphics graphics, FormattedCharSequence text, float x, float y, int color) {
-        graphics.pose().pushPose();
-        graphics.pose().translate(x, y, 0);
-        graphics.pose().scale(bodyScale, bodyScale, 1f);
-        graphics.drawString(font, text, 0, 0, color, false);
-        graphics.pose().popPose();
-    }
 
     private void renderModel(GuiGraphics graphics, Poster poster, int boxTop) {
         LivingEntity model = poster.model();

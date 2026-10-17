@@ -690,9 +690,12 @@ board is only where you look. One bounty is active at a time.
   and the screen draws nothing outside it (no drawn title: the texture owns the frame). Postings
   are **"WANTED" posters** on the hand-painted `bounty_card` (88×101, edge to edge): three fit
   across with 13 px margins and 12 px gaps, which is why `offersShown` is capped at 3. Each holds,
-  top to bottom at fixed offsets, the hand-painted `wanted_text` heading (57×16, drawn 43×12, 7 px from the top), the creature's
+  top to bottom at fixed offsets, the hand-painted `wanted_text` heading (57×16, drawn 43×12, 6 px from the top), the creature's
   model (28 px box at 20, scissored to that box in screen space, transformed by the hover scale,
-  so tall mobs never reach the heading), then the name (bold, upper case, one line, body-text scale)
+  so tall mobs never reach the heading), then the name (bold, upper case, one line; body-text scale when it fits the paper, else
+  shrunk to the largest pixel-snapped scale that fits, down to the small scale, and past that cut
+  with "..." and the full name put at the top of the poster's hover tooltip; shorter text is
+  vertically centred on the body-scale line)
   and "Slay N" (0.9 × body scale). Below that, laid out line by line from "Slay N" down, the
   rewards: the hand-painted `reward_text` heading (58×16, drawn 44×12, centred), then one centred
   line in detail text (0.9 × `GuiText.pixelSnappedSmallScale`): "N XP" first (there is only ever
