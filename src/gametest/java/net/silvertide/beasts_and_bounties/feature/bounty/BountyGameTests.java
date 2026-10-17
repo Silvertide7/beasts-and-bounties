@@ -37,7 +37,7 @@ public class BountyGameTests {
         helper.assertTrue(BountyDefinitions.all().size() == SHIPPED_BOUNTIES, "expected " + SHIPPED_BOUNTIES + " bounties, loaded " + BountyDefinitions.all().size());
         BountyDefinitions.all().keySet().forEach(entityId -> helper.assertTrue(BestiaryEntries.get(entityId) != null, entityId + " has a bounty but no entry"));
         BountyDefinition zombie = BountyDefinitions.all().get(ZOMBIE);
-        helper.assertTrue(zombie.kills() == 5 && zombie.bonusKills() == 4 && zombie.experienceReward() == 60 && zombie.itemRewards().getFirst().is(Items.EMERALD), "zombie bounty values");
+        helper.assertTrue(zombie.kills() == 5 && zombie.bonusKills() == 4 && zombie.experienceReward() == 150 && zombie.itemRewards().getFirst().is(Items.IRON_INGOT) && zombie.itemRewards().getFirst().getCount() == 15, "zombie bounty values");
         helper.succeed();
     }
 
@@ -133,8 +133,8 @@ public class BountyGameTests {
         killZombie(helper, player, sources);
         BountyState completed = PlayerBounties.state(player);
         helper.assertTrue(completed.active().isEmpty() && completed.ticksUntilReady(helper.getLevel().getGameTime()) > 0, "the last kill completes the bounty and starts the claim cooldown");
-        helper.assertTrue(player.getInventory().countItem(Items.EMERALD) == 3, "the emerald reward is given, got " + player.getInventory().countItem(Items.EMERALD));
-        helper.assertTrue(player.totalExperience == 60, "the experience reward is given, got " + player.totalExperience);
+        helper.assertTrue(player.getInventory().countItem(Items.IRON_INGOT) == 15, "the iron reward is given, got " + player.getInventory().countItem(Items.IRON_INGOT));
+        helper.assertTrue(player.totalExperience == 150, "the experience reward is given, got " + player.totalExperience);
         Progress progress = BestiaryProgress.of(player, ZOMBIE);
         helper.assertTrue(progress.equals(new Progress(6, 1)), "two real kills plus four bonus kills and one bounty, got " + progress);
         helper.succeed();

@@ -75,6 +75,7 @@ public final class BestiaryProgress {
         else all(player).put(entityId, progress);
         Payloads.sendIfConnected(player, new BestiaryPayloads.ProgressUpdate(entityId, progress));
         if (entry.milestoneReached(previous) != entry.milestoneReached(progress)) BestiaryAttributes.reapply(player);
+        BestiaryAdvancements.awardFor(player, entry, previous, progress);
     }
 
     public static void resetAll(ServerPlayer player) {

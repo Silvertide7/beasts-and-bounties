@@ -171,6 +171,7 @@ src/main/java/net/silvertide/beasts_and_bounties/
     BestiaryAttributes          sums attribute rewards over every entry, reapplies the transient modifiers
     BestiaryEvents              death → credit, damage → multipliers, datapack sync → payloads + attributes, respawn → attributes
     BestiaryPayloads            entries sync, full progress sync, single progress delta
+    BestiaryAdvancements        awards the three trophy advancements from BestiaryProgress.set
     BestiaryCommand             /bestiary admin commands
     BestiaryItem                right-click opens the screen on the client
   feature/bounty/
@@ -193,6 +194,7 @@ src/main/resources/
   beasts_and_bounties_logo.png  mod list logo (logoFile in mods.toml, logoBlur=false for pixel art); copy of bestiary_logo.png at the repo root
   assets/beasts_and_bounties/   lang, item model + texture, GUI spread + sprites
   builtin_data_packs/vanilla_bestiary/   built-in datapack: data/minecraft/bestiary/ (54 entries: hostile mobs, bosses, and livestock/fish players normally kill) and data/minecraft/bounty/ (38 bounties: hostiles and bosses only), pack.png
+  data/beasts_and_bounties/advancement/ root, entry_complete, bestiary_complete (impossible criteria, awarded by code)
   data/beasts_and_bounties/recipe/      bestiary (shaped: leather over book over bone), bounty_board (shaped: three paper over any sign over a stick); loot_table/blocks/bounty_board
 src/gametest/                   gametests + the empty structure template; loaded by dev runs, not in the jar
 ```
@@ -447,14 +449,14 @@ The only concrete detail is the current hunt key binding (`TrackingClientEvents.
 **3 levels** unlocked by milestone rewards `{"type": "passive_tracking" | "active_tracking", "level": 1-3}`.
 Each is precomputed as the highest level reached, into `Bonuses.passiveTracking` / `activeTracking`.
 
-- **Passive** (`PassiveTrackingLevel`) is a fading ping (every 20 / 15 / 12 s at P1 / P2 / P3), describing only the nearest one. Nothing in range means no ping and no text.
+- **Passive** (`PassiveTrackingLevel`) is a fading ping (every 25 / 19 / 15 s at P1 / P2 / P3), describing only the nearest one. Nothing in range means no ping and no text.
   and relative to where you faced at ping time:
 
   | Level | Range | The ping gives |
   |---|---|---|
   | P1 Scent | 24 | "You sense the Zombie to the left." 4-way. More than 4 blocks off, the height leads: "below you and to the left" (`TrackingHeight`). |
   | P2 Trail | 32 | "You're tracking the Zombie about 30 blocks away, ahead to the left." 8-way, height hint, distance rounded to the nearest 10 ("about", never "within": 34 rounds to 30). |
-  | P3 Track | 48 | "You've caught the scent of the Zombie about 30 blocks away. It's below you and to the left." Same text plus a **wisp trail**: a mod particle that spirals (radius 0.25, 0.4 rad/tick) from your eyes toward the creature at 0.45 blocks/tick, one particle a tick. It stops after 24 blocks and always at least 8 blocks short of the creature, so it points the way without marking it; within about 10 blocks there is no trail. |
+  | P3 Track | 48 | "You've caught the scent of the Zombie about 30 blocks away, below you and to the left." One sentence, plus a **wisp trail**: a mod particle that spirals (radius 0.25, 0.4 rad/tick) from your eyes toward the creature at 0.45 blocks/tick, one particle a tick. It stops after 24 blocks and always at least 8 blocks short of the creature, so it points the way without marking it; within about 10 blocks there is no trail. |
 
   The wisp is the registered particle `beasts_and_bounties:tracking_wisp`. It is `WispParticle`: vanilla
   end-rod motion at half the size, colour 0.8, max alpha 0.55 fading out over the second half of its
@@ -482,15 +484,19 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   an arrow at the bottom means "behind", not "below". The compass shows for the whole hunt whenever
   there is a target, glow or no glow: a glowing creature straight below you or just past a wall
   edge is easy to miss, and hiding the arrow made A2/A3 feel like a downgrade from A1. The glow is
-  purely additive. The hourglass hunt timer (icon + seconds) sits 3 px above the ring. Outside a hunt the hold text and bar use the status
+  purely additive. The hourglass hunt timer (icon + seconds) sits 3 px above the ring, and it is
+  **transient**: it appears for 5 s and fades over 1 s whenever the hunt phase changes (hunt
+  starts: "30s" counting down; hunt ends: "Ready in 240s" counting the cooldown) and again whenever
+  the hunt key is pressed while a hunt can't start (`ClientTracking.showTimer`, driven from the HUD's
+  per-frame `noticeHuntPhaseChanges`). The compass stays up for the whole hunt regardless. Outside a hunt the hold text and bar use the status
   slot at 84. Passive ping text is hidden while hunting (the compass already points the way and the
   ping's slot at 100 overlaps the compass); the wisp still shows. The crosshair area is left clear.
 
   | Level | Duration / cooldown | Arrow range | Glow |
   |---|---|---|---|
-  | A1 Hunt | 30 s / 90 s | 48 | none |
-  | A2 Sight | 30 s / 75 s | 48 | nearest within 32 |
-  | A3 Mark | 30 s / 60 s | 64 | every one within 32 |
+  | A1 Hunt | 30 s / 240 s | 48 | none |
+  | A2 Sight | 30 s / 180 s | 48 | nearest within 32 |
+  | A3 Mark | 30 s / 150 s | 64 | every one within 32 |
 
   Glow is for that player only, via two client-only mixins in
   `beasts_and_bounties.tracking.mixins.json`: `MinecraftMixin.shouldEntityAppearGlowing` turns it
@@ -529,7 +535,7 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   (`tracking`, `stopped`, `huntStarted`) and are gametested.
 - **Performance**: `TrackingScanner` runs on `PlayerTickEvent.Post`.
   - A player with no attachment costs one null check.
-  - Passive scans at the level's ping interval (400 / 300 / 240 ticks) and active every 10 ticks, staggered by
+  - Passive scans at the level's ping interval (500 / 380 / 300 ticks) and active every 10 ticks, staggered by
     `(gameTime + player.getId()) % interval`.
   - A scan is one `level.getEntities(type, box, filter)`, answered from entity sections, so
     tens of microseconds.
@@ -559,6 +565,24 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   9×9, drawn at native size centred in the 11 px list row;
   `icon_tracking` (the Tracking tab) copies the vanilla spyglass item. `track_button` (+ `_highlighted`) copies the vanilla `widget/button`
   nine-slice.
+
+### Advancements
+
+Three vanilla advancements in `data/beasts_and_bounties/advancement/`, each with one
+`minecraft:impossible` criterion that `BestiaryAdvancements` awards from code inside
+`BestiaryProgress.set`, the one place every progress change passes through (kills, bounties,
+commands). They are trophies only: nothing reads them back.
+
+| Id | Title | Awarded when | Frame |
+|---|---|---|---|
+| `root` | A Hunter's First Page | a creature's milestone index rises for the first time (it is now listed) | task, toast only |
+| `entry_complete` | Nothing Left to Learn | any entry reaches its final milestone | goal, announced |
+| `bestiary_complete` | Master of Beasts | every **loaded** entry is at its final milestone, checked after each completion | challenge, announced |
+
+The tab's icon is the bestiary item and its background `textures/gui/advancements/bestiary.png` is
+a 16×16 parchment tile cut from the book spread. `/bestiary complete` awards them like any other
+progress; `/bestiary reset` does not revoke them (advancements are never un-granted). A gametest
+walks a mock player through all three.
 
 ### Commands
 
@@ -639,8 +663,9 @@ There is no datagen and no `data` run config.
   and `disableBlend()`, or its near-transparent edge pixels draw at full strength as stray colours.
 - Text on the parchment is drawn **without a drop shadow** (`drawString(..., false)`). Vanilla widgets
   default to a shadow, which smears dark text; `EditBox` needs `setTextShadow(false)`.
-- **Never use Minecraft's advancement system** (no advancements, criteria or triggers). Milestones
-  are the only progression and reward mechanism.
+- **Milestones are the only progression and reward mechanism.** Advancements exist only as
+  trophies (see Advancements): they never gate or grant anything, and no criterion or trigger is
+  authored; the mod awards them from code.
 - `@EventBusSubscriber` leaves `bus` unset (the parameter is deprecated for removal): FML routes
   each `@SubscribeEvent` by its event type, so mod-bus events (`RegisterKeyMappingsEvent`,
   `AddPackFindersEvent`) and game-bus events can share a subscriber class. Registrations that need
@@ -668,8 +693,18 @@ is only where you look. One bounty is active at a time.
   the XP to give it, see the PMMO bridge below). A file whose entity doesn't exist is skipped with a
   WARN; one whose entity has **no bestiary entry** loads but is never offered (checked at offer
   time, because reload-listener order isn't guaranteed). Shipped in the vanilla pack for hostiles
-  and bosses only: normal 5 kills / weight 10 / +4 bonus / 3 emeralds + 60 XP; elite 3 / 4 / +2 /
-  6 + 120; minor boss 1 / 2 / +2 / 16 + 300; major boss 1 / 1 / +1 / 32 + 600.
+  and bosses only. Kills / weight / bonus kills / XP by classification: normal 5 / 10 / +4 / 150;
+  elite 3 / 4 / +2 / 350; minor boss 1 / 2 / +2 / 800; major boss 1 / 1 / +1 / 1500 (from level
+  20 that is about 2.5, 5, 11 and 18 levels; vanilla's per-level cost is 2L+7 up to 15, 5L−38 to
+  30, 9L−158 after). Items are themed per creature, ingots and gems only (never blocks), one or two
+  kinds each so the poster's icon row stays short, and sized to be worth the trip (15 iron is more
+  than a vein): normals give 15 iron ingots (zombie, skeleton, spider, cave spider, silverfish,
+  slime), 10 gold ingots (husk, stray, drowned, magma cube, piglin, zombified piglin, hoglin,
+  zoglin), 10 emeralds (zombie villager, vindicator, witch, pillager, vex, bogged, guardian) or
+  3 diamonds (creeper, enderman, endermite, blaze, ghast, shulker, phantom); every elite gives
+  4 diamonds plus 16 of its theme (iron for wither skeleton and breeze, gold for ravager and
+  piglin brute, emeralds for evoker and illusioner); minor bosses give netherite ingots + diamonds
+  (elder guardian 2 + 10, warden 3 + 12); major bosses more of both (wither 4 + 16, ender dragon 5 + 20).
 - **Offers** (`BountyOffers.pick`): `offersShown` distinct weighted picks from a `RandomSource`
   seeded by the overworld seed, `gameTime / refreshTicks` and the world's reroll count
   (`BoardRerolls`, a `SavedData` on the overworld, bumped only by the admin command), so the same

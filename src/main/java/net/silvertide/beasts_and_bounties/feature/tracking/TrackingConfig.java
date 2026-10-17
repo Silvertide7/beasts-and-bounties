@@ -18,9 +18,9 @@ public final class TrackingConfig {
     record ActiveLevel(ModConfigSpec.IntValue durationSeconds, ModConfigSpec.IntValue cooldownSeconds, ModConfigSpec.IntValue arrowRange) {}
 
     private static final int[] DEFAULT_PASSIVE_RANGES = {24, 32, 48};
-    private static final int[] DEFAULT_PING_INTERVALS_SECONDS = {20, 15, 12};
+    private static final int[] DEFAULT_PING_INTERVALS_SECONDS = {25, 19, 15};
     private static final int[] DEFAULT_HUNT_DURATIONS_SECONDS = {30, 30, 30};
-    private static final int[] DEFAULT_HUNT_COOLDOWNS_SECONDS = {90, 75, 60};
+    private static final int[] DEFAULT_HUNT_COOLDOWNS_SECONDS = {240, 180, 150};
     private static final int[] DEFAULT_ARROW_RANGES = {48, 48, 64};
     private static final int MAX_RANGE_BLOCKS = 256;
     private static final int MAX_SECONDS = 3600;

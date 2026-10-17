@@ -5,12 +5,12 @@
   "rewards": [
     {
       "type": "item",
-      "item": "minecraft:emerald",
-      "count": 3
+      "item": "minecraft:iron_ingot",
+      "count": 15
     },
     {
       "type": "experience",
-      "amount": 60
+      "amount": 150
     }
   ]
 }

@@ -3,6 +3,7 @@ package net.silvertide.beasts_and_bounties.feature.tracking.client;
 import com.mojang.math.Axis;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.DeltaTracker;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -45,6 +46,8 @@ final class TrackingHud {
     private static final int PING_LINE_HEIGHT = 10;
     private static final int PING_COLOR = 0xEADFC8;
     private static final long PING_FADE_MILLIS = 2000L;
+    private static final long TIMER_HOLD_MILLIS = 5000L;
+    private static final long TIMER_FADE_MILLIS = 1000L;
     private static final int MIN_VISIBLE_ALPHA = 8;
     private static final int OPAQUE = 255;
     private static final int TIMER_SIZE = 8;
@@ -57,6 +60,7 @@ final class TrackingHud {
     private static final int HOLD_BAR_BACKGROUND = 0x80000000;
     private static final int HOLD_BAR_FILL = 0xFFFFAA00;
     private static final SecondsText timerText = new SecondsText("tracking.beasts_and_bounties.timer");
+    private static final SecondsText cooldownText = new SecondsText("tracking.beasts_and_bounties.cooldown_timer");
 
     private TrackingHud() {}
 
@@ -65,12 +69,11 @@ final class TrackingHud {
         Player player = minecraft.player;
         if (minecraft.options.hideGui || player == null || minecraft.level == null) return;
         long now = minecraft.level.getGameTime();
+        ClientTracking.noticeHuntPhaseChanges(now);
         boolean hunting = ClientTracking.state().filter(state -> state.isHunting(now)).isPresent();
         if (!hunting) renderPing(graphics, minecraft);
-        ClientTracking.state().filter(state -> state.isHunting(now)).ifPresent(state -> {
-            renderHuntCompass(graphics, minecraft, player, deltaTracker.getGameTimeDeltaPartialTick(true));
-            renderHuntTimer(graphics, minecraft, state.huntEndsAt() - now);
-        });
+        if (hunting) renderHuntCompass(graphics, minecraft, player, deltaTracker.getGameTimeDeltaPartialTick(true));
+        ClientTracking.state().ifPresent(state -> renderHuntTimer(graphics, minecraft, state, now));
         if (ClientTracking.isHolding()) renderHold(graphics, minecraft);
     }
 
@@ -134,13 +137,24 @@ final class TrackingHud {
         });
     }
 
-    private static void renderHuntTimer(GuiGraphics graphics, Minecraft minecraft, long ticksLeft) {
-        Component seconds = timerText.textFor(Math.ceilDiv(ticksLeft, SharedConstants.TICKS_PER_SECOND));
-        int width = TIMER_SIZE + TIMER_GAP + minecraft.font.width(seconds);
+    private static void renderHuntTimer(GuiGraphics graphics, Minecraft minecraft, TrackingState state, long now) {
+        int alpha = fadingAlpha(ClientTracking.millisSinceTimerShown(), TIMER_HOLD_MILLIS, TIMER_FADE_MILLIS);
+        if (alpha < MIN_VISIBLE_ALPHA) return;
+        boolean hunting = state.isHunting(now);
+        long ticksLeft = hunting ? state.huntEndsAt() - now : state.ticksUntilReady(now);
+        if (ticksLeft <= 0) return;
+        long secondsLeft = Math.ceilDiv(ticksLeft, SharedConstants.TICKS_PER_SECOND);
+        Component text = hunting ? timerText.textFor(secondsLeft) : cooldownText.textFor(secondsLeft);
+        int width = TIMER_SIZE + TIMER_GAP + minecraft.font.width(text);
         int x = (graphics.guiWidth() - width) / 2;
         int y = compassCenterY(graphics) - RING_SIZE / 2 - HUNT_TIMER_GAP_ABOVE_RING - TIMER_SIZE;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShaderColor(1f, 1f, 1f, alpha / (float) OPAQUE);
         graphics.blitSprite(TIMER_SPRITE, x, y, TIMER_SIZE, TIMER_SIZE);
-        graphics.drawString(minecraft.font, seconds, x + TIMER_SIZE + TIMER_GAP, y, HUNT_TIMER_COLOR, false);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.disableBlend();
+        graphics.drawString(minecraft.font, text, x + TIMER_SIZE + TIMER_GAP, y, (alpha << 24) | HUNT_TIMER_COLOR, false);
     }
 
     private static void renderHold(GuiGraphics graphics, Minecraft minecraft) {

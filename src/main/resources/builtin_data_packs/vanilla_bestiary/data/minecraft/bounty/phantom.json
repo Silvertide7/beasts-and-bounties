@@ -5,12 +5,12 @@
   "rewards": [
     {
       "type": "item",
-      "item": "minecraft:emerald",
+      "item": "minecraft:diamond",
       "count": 3
     },
     {
       "type": "experience",
-      "amount": 60
+      "amount": 150
     }
   ]
 }

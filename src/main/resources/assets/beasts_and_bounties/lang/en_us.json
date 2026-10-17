@@ -635,7 +635,7 @@
   "tracking.beasts_and_bounties.height.below": "below you",
   "tracking.beasts_and_bounties.ping.1": "You sense the %s %s.",
   "tracking.beasts_and_bounties.ping.2": "You're tracking the %s about %s blocks away, %s.",
-  "tracking.beasts_and_bounties.ping.3": "You've caught the scent of the %s about %s blocks away. It's %s.",
+  "tracking.beasts_and_bounties.ping.3": "You've caught the scent of the %s about %s blocks away, %s.",
   "tracking.beasts_and_bounties.whereabouts": "%s and %s",
   "tracking.beasts_and_bounties.holding": "Searching for the %s's trail",
   "subtitles.beasts_and_bounties.hunt_start": "Hunter sniffs the air",
@@ -687,5 +687,12 @@
   "gui.beasts_and_bounties.board.rewards_tooltip": "Rewards:",
   "gui.beasts_and_bounties.board.item_line": "%s× %s",
   "gui.beasts_and_bounties.board.ellipsis": "...",
-  "gui.beasts_and_bounties.board.skill_experience": "+%s %s XP"
+  "gui.beasts_and_bounties.board.skill_experience": "+%s %s XP",
+  "tracking.beasts_and_bounties.cooldown_timer": "Ready in %ss",
+  "advancements.beasts_and_bounties.root.title": "A Hunter's First Page",
+  "advancements.beasts_and_bounties.root.description": "Record your first creature in the Hunter's Bestiary",
+  "advancements.beasts_and_bounties.entry_complete.title": "Nothing Left to Learn",
+  "advancements.beasts_and_bounties.entry_complete.description": "Reach a creature's final milestone",
+  "advancements.beasts_and_bounties.bestiary_complete.title": "Master of Beasts",
+  "advancements.beasts_and_bounties.bestiary_complete.description": "Reach the final milestone of every creature in the bestiary"
 }

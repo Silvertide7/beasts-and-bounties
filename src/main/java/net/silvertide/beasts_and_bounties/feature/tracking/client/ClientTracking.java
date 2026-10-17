@@ -30,6 +30,8 @@ public final class ClientTracking {
     private static boolean holdSpent;
     private static List<FormattedCharSequence> pingLines = List.of();
     private static long pingShownAtMillis;
+    private static long timerShownAtMillis;
+    private static boolean wasHunting;
 
     private ClientTracking() {}
 
@@ -38,6 +40,20 @@ public final class ClientTracking {
         state = newState;
         if (!trackedCreature().equals(previousCreature)) forgetPing();
         BestiaryScreen.refreshIfOpen();
+    }
+
+    static void noticeHuntPhaseChanges(long gameTime) {
+        boolean hunting = isHunting(gameTime);
+        if (hunting != wasHunting) showTimer();
+        wasHunting = hunting;
+    }
+
+    private static void showTimer() {
+        timerShownAtMillis = Util.getMillis();
+    }
+
+    static long millisSinceTimerShown() {
+        return Util.getMillis() - timerShownAtMillis;
     }
 
     public static void receivePing(TrackingPayloads.PassivePing ping) {
@@ -59,6 +75,7 @@ public final class ClientTracking {
         receiveHunt(TrackingPayloads.HuntUpdate.NONE);
         holdTicks = 0;
         holdSpent = false;
+        wasHunting = false;
     }
 
     public static boolean isGlowing(Entity entity) {
@@ -82,6 +99,7 @@ public final class ClientTracking {
         if (holdSpent) return;
         if (holdTicks == 0 && !explainWhyHuntCannotStart(gameTime)) {
             holdSpent = true;
+            showTimer();
             return;
         }
         holdTicks++;

@@ -5,12 +5,17 @@
   "rewards": [
     {
       "type": "item",
-      "item": "minecraft:emerald",
-      "count": 16
+      "item": "minecraft:netherite_ingot",
+      "count": 3
+    },
+    {
+      "type": "item",
+      "item": "minecraft:diamond",
+      "count": 12
     },
     {
       "type": "experience",
-      "amount": 300
+      "amount": 800
     }
   ]
 }

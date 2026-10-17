@@ -20,6 +20,7 @@ import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,6 +38,27 @@ import java.util.List;
 public class BestiaryGameTests {
     private static final int SHIPPED_VANILLA_ENTRIES = 54;
     private static final double TOLERANCE = 1e-9;
+
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void advancementsFollowBestiaryProgress(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ResourceLocation skeleton = EntityType.getKey(EntityType.SKELETON);
+        BestiaryEntry entry = BestiaryEntries.get(skeleton);
+        helper.assertTrue(!hasAdvancement(player, "root"), "nothing awarded before any entry");
+        BestiaryProgress.addKills(player, skeleton, entry, 1);
+        helper.assertTrue(hasAdvancement(player, "root") && !hasAdvancement(player, "entry_complete"), "the first listed entry awards the root advancement only");
+        BestiaryProgress.set(player, skeleton, entry, entry.milestones().getLast().requirement());
+        helper.assertTrue(hasAdvancement(player, "entry_complete") && !hasAdvancement(player, "bestiary_complete"), "a maxed entry awards entry_complete, not the whole bestiary");
+        BestiaryEntries.all().forEach((entityId, each) -> BestiaryProgress.set(player, entityId, each, each.milestones().getLast().requirement()));
+        helper.assertTrue(hasAdvancement(player, "bestiary_complete"), "maxing every entry awards bestiary_complete");
+        helper.succeed();
+    }
+
+    private static boolean hasAdvancement(ServerPlayer player, String path) {
+        AdvancementHolder advancement = player.server.getAdvancements().get(BeastsAndBountiesMod.id(path));
+        return advancement != null && player.getAdvancements().getOrStartProgress(advancement).isDone();
+    }
 
     @GameTest(template = "empty")
     public static void everyShippedEntryLoads(GameTestHelper helper) {

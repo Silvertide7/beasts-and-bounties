@@ -6,11 +6,11 @@
     {
       "type": "item",
       "item": "minecraft:emerald",
-      "count": 3
+      "count": 10
     },
     {
       "type": "experience",
-      "amount": 60
+      "amount": 150
     }
   ]
 }
