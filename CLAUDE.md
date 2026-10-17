@@ -622,7 +622,8 @@ There is no datagen and no `data` run config.
   "1 kill"). The book is "Hunter's Bestiary"; sections read "How It Fights", "Where It Dwells" and
   "Hunter's Notes". Tracking text names the creature with "the" ("You sense the Zombie…"),
   never "a", which breaks before vowels ("a Enderman"). No ellipses in HUD text.
-- **Two text sizes.** Titles and the creature list draw at normal size. The entry body (description,
+- **Two text sizes** (the bounty poster's "Slay N" and reward detail lines are the exception: the user
+  asked for them slightly smaller, so they use 0.9 × a snapped scale and may look a touch soft). Titles and the creature list draw at normal size. The entry body (description,
   stats, sections, rewards) draws smaller, at a target of 0.75 **snapped to whole screen pixels**:
   `round(guiScale × 0.75) / guiScale` (GUI scale 3 gives 0.67, 4 gives 0.75, 2 stays 1.0). The
   Minecraft font is a bitmap, so any other scale blurs it. Body lines wrap at `width / scale`, and
@@ -691,9 +692,13 @@ board is only where you look. One bounty is active at a time.
   across with 13 px margins and 12 px gaps, which is why `offersShown` is capped at 3. Each holds,
   top to bottom at fixed offsets, the hand-painted `wanted_text` heading (57×16, drawn 43×12, 7 px from the top), the creature's
   model (28 px box at 20, scissored to that box in screen space, transformed by the hover scale,
-  so tall mobs never reach the heading), then at body-text scale the name (one line, upper case),
-  "Slay N", and one reward line: the hand-painted `reward_text` label (58×16, drawn 36×10), the item icons at 0.625 scale (`renderItem`, the
-  items themselves) and "+N XP". The bottom of the paper is left for the hover-only button. Hovering a poster swaps in `bounty_card_highlighted`, scales it
+  so tall mobs never reach the heading), then the name (bold, upper case, one line, body-text scale)
+  and "Slay N" (0.9 × body scale). Below that, laid out line by line from "Slay N" down, the
+  rewards: "Rewards" (black, full-size text, centred: the section heading), then in detail text
+  (0.9 × `GuiText.pixelSnappedSmallScale`) "N XP" (centred), then 3 px lower the item rewards as 8 px
+  icons (`renderItem` + `renderItemDecorations`, so the count sits on the icon like a stack),
+  centred, up to 9 a row and wrapping to further rows below. N is experience **points** (`giveExperiencePoints`), not levels, because a
+  level's cost depends on the player's current level. A line with nothing to show is left out. The bottom of the paper is left for the hover-only button. Hovering a poster swaps in `bounty_card_highlighted`, scales it
   up 10% about its centre and pushes its drop shadow from 2 px to 4 px (the shadow is the paper's own silhouette, drawn black and offset down-right, so the ragged edge casts a matching shadow) and only
   then shows its Accept action: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 3/4 size (66×12) and centred; the drawn sprite is the click area. The active poster uses `abandon_text` (92×16, drawn 69×12) the same way.
   Hovering a poster shows the creature's **habitat lines from its entry's full knowledge** (a

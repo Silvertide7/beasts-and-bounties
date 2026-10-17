@@ -36,7 +36,6 @@ final class BountyBoardScreen extends Screen {
     private static final ResourceLocation BOARD_TEXTURE = BeastsAndBountiesMod.id("textures/gui/bounty_board.png");
     private static final ResourceLocation CARD_SPRITE = BeastsAndBountiesMod.id("bestiary/bounty_card");
     private static final ResourceLocation WANTED_SPRITE = BeastsAndBountiesMod.id("bestiary/wanted_text");
-    private static final ResourceLocation REWARD_SPRITE = BeastsAndBountiesMod.id("bestiary/reward_text");
     private static final ResourceLocation HOVERED_CARD_SPRITE = BeastsAndBountiesMod.id("bestiary/bounty_card_highlighted");
 
     private static final int BOARD_WIDTH = 352;
@@ -52,17 +51,21 @@ final class BountyBoardScreen extends Screen {
     private static final int HEADING_Y = 7;
     private static final int WANTED_DRAWN_WIDTH = 43;
     private static final int WANTED_DRAWN_HEIGHT = 12;
-    private static final int REWARD_LABEL_DRAWN_WIDTH = 36;
     private static final int MODEL_BOX_TOP = 20;
     private static final int MODEL_BOX_HEIGHT = 28;
     private static final int NAME_Y = 49;
-    private static final int TASK_Y = 57;
-    private static final int REWARD_Y = 65;
-    private static final int REWARD_ICON_SIZE = 16;
-    private static final float REWARD_ICON_SCALE = 0.625f;
-    private static final float REWARD_GAP = 2f;
+    private static final int TASK_Y = 56;
+    private static final int LINE_GAP = 1;
+    private static final float SLIGHTLY_SMALLER = 0.9f;
+    private static final float REWARDS_HEADING_SCALE = 1f;
+    private static final int ITEM_ICON_NATIVE_SIZE = 16;
+    private static final int ITEM_ICON_DRAWN_SIZE = 8;
+    private static final int ITEM_GAP = 1;
+    private static final int DETAIL_RAISE = 2;
+    private static final int XP_TO_ITEMS_GAP = 3;
+    private static final int REWARD_TEXT_COLOR = 0x000000;
     private static final int BUTTON_HEIGHT = 12;
-    private static final int BUTTON_BOTTOM_MARGIN = 5;
+    private static final int BUTTON_BOTTOM_MARGIN = 3;
     private static final float HOVERED_SCALE = 1.1f;
     private static final float SHADOW_ALPHA = 0.6f;
     private static final int SHADOW_OFFSET = 2;
@@ -103,6 +106,8 @@ final class BountyBoardScreen extends Screen {
     private int left;
     private int top;
     private float bodyScale;
+    private float detailScale;
+    private float slayScale;
 
     BountyBoardScreen(BountyPayloads.BoardOpened board) {
         super(Component.translatable("gui.beasts_and_bounties.board.title"));
@@ -114,6 +119,8 @@ final class BountyBoardScreen extends Screen {
         left = (width - BOARD_WIDTH) / 2;
         top = (height - BOARD_HEIGHT) / 2;
         bodyScale = GuiText.pixelSnappedBodyScale();
+        detailScale = GuiText.pixelSnappedSmallScale() * SLIGHTLY_SMALLER;
+        slayScale = bodyScale * SLIGHTLY_SMALLER;
         posters.clear();
         Optional<BountyState.ActiveBounty> active = board.state().active();
         List<ResourceLocation> shown = active.map(bounty -> List.of(bounty.entityId()))
@@ -131,7 +138,7 @@ final class BountyBoardScreen extends Screen {
             tooltip.addAll(habitat);
         }
         Entity entity = BuiltInRegistries.ENTITY_TYPE.get(entityId).create(Minecraft.getInstance().level);
-        return new Poster(entityId, x, font.split(Component.literal(ClientBestiary.creatureName(entityId).getString().toUpperCase(Locale.ROOT)), (int) ((CARD_WIDTH - 2 * CARD_PADDING) / bodyScale)).getFirst(), tooltip,
+        return new Poster(entityId, x, font.split(Component.literal(ClientBestiary.creatureName(entityId).getString().toUpperCase(Locale.ROOT)).withStyle(ChatFormatting.BOLD), (int) ((CARD_WIDTH - 2 * CARD_PADDING) / bodyScale)).getFirst(), tooltip,
                 entity instanceof LivingEntity living ? living : null);
     }
 
@@ -188,8 +195,8 @@ final class BountyBoardScreen extends Screen {
         blitBlended(graphics, WANTED_SPRITE, poster.centerX() - WANTED_DRAWN_WIDTH / 2, y + HEADING_Y, WANTED_DRAWN_WIDTH, WANTED_DRAWN_HEIGHT);
         renderModel(graphics, poster, y + MODEL_BOX_TOP);
         drawScaled(graphics, poster.nameLine(), poster.centerX() - font.width(poster.nameLine()) * bodyScale / 2, y + NAME_Y, TEXT_COLOR);
-        drawCenteredScaled(graphics, task, poster.centerX(), y + TASK_Y, TEXT_COLOR);
-        if (rewards != null) renderRewards(graphics, poster, rewards, y + REWARD_Y);
+        drawCenteredScaled(graphics, task, poster.centerX(), y + TASK_Y, slayScale, TEXT_COLOR);
+        if (rewards != null) renderRewards(graphics, poster, rewards, y + TASK_Y + GLYPH_HEIGHT * slayScale + LINE_GAP);
         graphics.pose().popPose();
         PosterButton button = posterButton();
         if (hovered && button != null) {
@@ -198,25 +205,43 @@ final class BountyBoardScreen extends Screen {
         }
     }
 
-    private void renderRewards(GuiGraphics graphics, Poster poster, BountyPayloads.Offer offer, int y) {
-        Component experience = Component.translatable("gui.beasts_and_bounties.board.experience", offer.experience());
-        float iconSize = REWARD_ICON_SIZE * REWARD_ICON_SCALE;
-        float textY = y + (iconSize - GLYPH_HEIGHT * bodyScale) / 2;
-        float totalWidth = REWARD_LABEL_DRAWN_WIDTH + REWARD_GAP + offer.items().size() * iconSize
-                + (offer.experience() > 0 ? REWARD_GAP + font.width(experience) * bodyScale : 0);
-        float rowX = poster.centerX() - totalWidth / 2;
-        blitBlended(graphics, REWARD_SPRITE, Math.round(rowX), y, REWARD_LABEL_DRAWN_WIDTH, Math.round(iconSize));
-        rowX += REWARD_LABEL_DRAWN_WIDTH + REWARD_GAP;
-        for (ItemStack stack : offer.items()) {
+    private void renderRewards(GuiGraphics graphics, Poster poster, BountyPayloads.Offer offer, float y) {
+        drawCenteredScaled(graphics, Component.translatable("gui.beasts_and_bounties.board.rewards"), poster.centerX(), Math.round(y), REWARDS_HEADING_SCALE, REWARD_TEXT_COLOR);
+        y += GLYPH_HEIGHT * REWARDS_HEADING_SCALE + LINE_GAP - DETAIL_RAISE;
+        if (offer.experience() > 0) {
+            Component experience = Component.translatable("gui.beasts_and_bounties.board.experience", offer.experience());
+            drawSmall(graphics, experience, poster.centerX() - font.width(experience) * detailScale / 2, y);
+            y += GLYPH_HEIGHT * detailScale + XP_TO_ITEMS_GAP;
+        }
+        int perRow = (CARD_WIDTH - 2 * CARD_PADDING + ITEM_GAP) / (ITEM_ICON_DRAWN_SIZE + ITEM_GAP);
+        List<ItemStack> items = offer.items();
+        for (int start = 0; start < items.size(); start += perRow) {
+            renderItemRow(graphics, poster, items.subList(start, Math.min(items.size(), start + perRow)), y);
+            y += ITEM_ICON_DRAWN_SIZE + ITEM_GAP;
+        }
+    }
+
+    private void renderItemRow(GuiGraphics graphics, Poster poster, List<ItemStack> items, float y) {
+        float rowWidth = items.size() * (ITEM_ICON_DRAWN_SIZE + ITEM_GAP) - ITEM_GAP;
+        float x = poster.centerX() - rowWidth / 2;
+        float iconScale = (float) ITEM_ICON_DRAWN_SIZE / ITEM_ICON_NATIVE_SIZE;
+        for (ItemStack stack : items) {
             graphics.pose().pushPose();
-            graphics.pose().translate(rowX, y, 0);
-            graphics.pose().scale(REWARD_ICON_SCALE, REWARD_ICON_SCALE, 1f);
+            graphics.pose().translate(x, y, 0);
+            graphics.pose().scale(iconScale, iconScale, 1f);
             graphics.renderItem(stack, 0, 0);
             graphics.renderItemDecorations(font, stack, 0, 0);
             graphics.pose().popPose();
-            rowX += iconSize;
+            x += ITEM_ICON_DRAWN_SIZE + ITEM_GAP;
         }
-        if (offer.experience() > 0) drawScaled(graphics, experience.getVisualOrderText(), rowX + REWARD_GAP, textY, ChatFormatting.DARK_GREEN.getColor());
+    }
+
+    private void drawSmall(GuiGraphics graphics, Component text, float x, float y) {
+        graphics.pose().pushPose();
+        graphics.pose().translate(x, y, 0);
+        graphics.pose().scale(detailScale, detailScale, 1f);
+        graphics.drawString(font, text, 0, 0, REWARD_TEXT_COLOR, false);
+        graphics.pose().popPose();
     }
 
     private static void blitBlended(GuiGraphics graphics, ResourceLocation sprite, int x, int y, int width, int height) {
@@ -265,10 +290,10 @@ final class BountyBoardScreen extends Screen {
         graphics.disableScissor();
     }
 
-    private void drawCenteredScaled(GuiGraphics graphics, Component text, int centerX, int y, int color) {
+    private void drawCenteredScaled(GuiGraphics graphics, Component text, int centerX, int y, float scale, int color) {
         graphics.pose().pushPose();
         graphics.pose().translate(centerX, y, 0);
-        graphics.pose().scale(bodyScale, bodyScale, 1f);
+        graphics.pose().scale(scale, scale, 1f);
         graphics.drawString(font, text, -font.width(text) / 2, 0, color, false);
         graphics.pose().popPose();
     }

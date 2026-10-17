@@ -661,7 +661,7 @@
   "block.beasts_and_bounties.bounty_board": "Bounty Board",
   "gui.beasts_and_bounties.board.title": "Bounty Board",
   "gui.beasts_and_bounties.board.kills": "Slay %s",
-  "gui.beasts_and_bounties.board.experience": "+%s XP",
+  "gui.beasts_and_bounties.board.experience": "%s XP",
   "gui.beasts_and_bounties.board.cooldown": "The board has nothing for you for %s.",
   "gui.beasts_and_bounties.board.refresh": "New postings in %s.",
   "gui.beasts_and_bounties.time.minutes": "%s min",
@@ -680,5 +680,6 @@
   "commands.beasts_and_bounties.board.cleared": "Cleared the active bounty and cooldown for %s player(s)",
   "gui.beasts_and_bounties.board.progress": "%s of %s slain",
   "gui.beasts_and_bounties.board.active_hint": "Finish this hunt before taking another.",
-  "gui.beasts_and_bounties.board.habitat": "Last seen:"
+  "gui.beasts_and_bounties.board.habitat": "Last seen:",
+  "gui.beasts_and_bounties.board.rewards": "Rewards"
 }
