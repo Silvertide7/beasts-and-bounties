@@ -1,12 +1,12 @@
 {
-  "kills": 3,
-  "weight": 4,
-  "bonus_kills": 2,
+  "kills": 2,
+  "weight": 3,
+  "bonus_kills": 5,
   "rewards": [
     {
       "type": "item",
       "item": "minecraft:diamond",
-      "count": 4
+      "count": 6
     },
     {
       "type": "item",
@@ -15,7 +15,7 @@
     },
     {
       "type": "experience",
-      "amount": 350
+      "amount": 500
     }
   ]
 }

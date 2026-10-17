@@ -1,141 +1,105 @@
 # Beasts & Bounties
 
-Beasts & Bounties adds a Hunter's Bestiary to Minecraft: a book that fills in as you hunt. Every creature has an entry made of milestones. Each kill brings you closer to the next one, and each milestone teaches you something about the creature and makes you a little better at fighting it.
+Beasts & Bounties does not add a single new creature to Minecraft. It gives you better reasons to hunt the ones already out there. Every kill is written into a Hunter's Bestiary that reveals a creature's secrets and sharpens you against it. Hunt one long enough and you learn to track it. A Bounty Board posts fresh hunts with real rewards. The hundredth zombie you slay should mean more than the first, and now it does.
 
-I wanted monster hunting to feel like it builds toward something. In vanilla, your hundredth zombie kill is the same as your first. With this mod, a player who has hunted a creature for a long time knows how it fights and where it lives, hits it harder, takes less from it, and can sense it nearby. None of that comes from gear. It comes from experience.
-
-The mod has three parts that feed each other: the **Bestiary**, the **Bounty Board**, and **Tracking**. Everything is data-driven, and the vanilla content is included so you can install it and play.
+Everything is data-driven and works with any creature, vanilla or modded. The vanilla content is included, so you can install it and play. It is built to be light on the server and should sit comfortably alongside other mods.
 
 **Website:** https://mods.silvertide.net/beasts-and-bounties
 
 **Requires [SilverLib](https://www.curseforge.com/minecraft/mc-mods/silverlib).**
 
-<insert picture of the Hunter's Bestiary open on a fully revealed entry here>
-
 ---
 
 ## The Bestiary
 
-Craft the Hunter's Bestiary from leather, a book, and a bone stacked in a column. You do not need to carry it for kills to count. The book is just where you read what you have learned.
+<insert small bestiary item texture here>
 
-A creature appears in the book after your first kill, listed as ??? with its model hidden. As you reach milestones, the entry fills in:
+A book that fills itself in as you hunt. Every creature has an entry made of milestones, and each kill brings you closer to the next one. A new creature starts as a nameless ??? and, milestone by milestone, gives up its name, its 3D model, its stats, how it fights, its strengths and weaknesses, where it dwells, and a hunter's notes on it. Every player keeps their own book.
 
-- Its name, type, and a slowly rotating 3D model.
-- A description and stats: Health, Damage, Speed, and Armor.
-- **How It Fights**: its attacks and behaviors.
-- **Strengths** and **Weaknesses**.
-- **Where It Dwells**.
-- **Hunter's Notes**: extra lore and tips.
+Knowledge is only half of it. Milestones also grant permanent bonuses: more damage against that creature, less damage taken from it, extra loot rolls, bonus experience, and a small attribute boon themed to the beast. Slay enough creepers and explosions push you around a little less. Finish the spider and you step a little higher. It all stacks, so a seasoned hunter is a tougher one.
 
-Each milestone you reach shows a toast, "New Creature Recorded" for the first and "Knowledge Deepened" after that.
+<insert picture of the Hunter's Bestiary open on a fully unlocked entry here>
 
-### Reading the book
+## Tracking
 
-The left page lists every creature you have discovered, with a search bar at the top. Dangerous creatures stand out: Elites, Minor Bosses, and Major Bosses get a coloured name and an icon. The right page shows the selected creature, split into tabs:
+<insert picture of the hunt compass pointing at a glowing creature here>
 
-- **Overview**: name, model, type, description, how many you have slain, how many bounties you have completed, and the next milestone's requirement. Once there is nothing left it reads "Entry complete. Nothing left to learn."
+Know a creature well enough and you can sense it. Tracking unlocks through milestones and comes in two kinds, each with three levels.
+
+**Passive Sense** whispers to you now and then when your tracked creature is near: "You sense the Zombie to the left." Higher levels sharpen the direction, add a distance, and at the top send a wisp of light spiralling away from you toward it.
+
+**Active Hunt** is the chase. Hold the hunt key and a compass rises above your hotbar, pointing the way to the nearest one. At higher levels the creature glows through walls, for your eyes only. Then the trail goes cold, and you wait before hunting again.
+
+## Bounties
+
+<insert picture of a WANTED bounty card here>
+
+A Bounty Board posts WANTED posters: slay so many of a creature and claim the reward in items and experience. You hold one bounty at a time. Postings refresh every Minecraft day and are the same for everyone on the server, so friends can take the same hunt together. Completing a bounty also feeds your bestiary with a claimed bounty and bonus kills, and entries can require bounties to reach their later milestones.
+
+---
+
+## Getting Started
+
+### 1. Craft the Hunter's Bestiary
+
+Leather over a book over a bone, stacked in a column. Right-click to open it. You do not need to carry it for kills to count; the book is where you read what you have learned. It also lives in the Tools & Utilities creative tab.
+
+### 2. Go hunting
+
+Kill something. Anything with an entry appears in your book after the first kill, with a "New Creature Recorded" toast. Each milestone after that shows "Knowledge Deepened." Everyone who took part in a fight gets credit, including the owner of a pet or summon and anyone who healed the group, so a party hunt moves everyone's book forward.
+
+### 3. Read the book
+
+The left page lists every creature you have found, with a search bar at the top. Elites and bosses stand out with a coloured name and an icon. The right page shows the selected creature across tabs:
+
+- **Overview**: name, model, type, description, "Slain" and "Bounties completed" counts, and the next milestone's requirement. When there is nothing left it reads "Entry complete. Nothing left to learn."
 - **Knowledge**: the stats, then How It Fights, Strengths, Weaknesses, Where It Dwells, and Hunter's Notes.
-- **Rewards**: every bonus you have earned from this creature, explained below.
+- **Rewards**: what you have earned, in two sections. "Against the Zombie" holds the bonuses that apply only while fighting it. "Permanent Boons" holds the attribute bonuses that are always active.
 - **Tracking & Bounties**: the Track button, your active bounty's progress, and the tracking levels you have learned.
 
 Tabs with nothing to show stay hidden until you unlock something for them.
 
-<insert picture of the Knowledge tab showing stats and sections here>
+### 4. Track a creature
 
-### Rewards
+Once an entry has unlocked tracking, press **Track** on its Tracking & Bounties tab. You track one creature at a time, an eye icon marks it in the list, and **Stop Tracking** is in the same place. The book describes each level you have learned in plain words.
 
-Milestones grant permanent bonuses. The Rewards tab splits them into two sections.
+| Passive Sense | What you sense |
+|---|---|
+| **Scent** | Whether it is close and roughly which way. |
+| **Trail** | A finer direction and about how far. |
+| **Track** | The same, from further off, plus the wisp that spirals toward it. |
 
-**Against the creature.** These only apply while fighting that creature type:
+For the hunt, hold the **Hunt Tracked Creature** key (G by default, rebindable) for two seconds. The compass shows a timer counting the hunt down, with an up or down marker when the creature is above or below you. When the hunt ends the timer shows how long until the next one.
 
-- Increased damage.
-- Less damage taken.
-- A chance of an extra loot roll on each kill.
-- Bonus experience from its drops.
+| Active Hunt | What you get |
+|---|---|
+| **Hunt** | The compass. |
+| **Sight** | The compass, and once the nearest creature is close it glows through walls. A shorter cooldown. |
+| **Mark** | The compass reaches further and every creature of that type nearby glows. The shortest cooldown. |
 
-**Permanent Boons.** A small attribute bonus that is always active, themed to the creature. Zombies give Max Health. Creepers give Explosion Knockback Resistance. Spiders give Step Height. Guardians give Submerged Mining Speed. There are 18 different attributes spread across the vanilla entries, and they all stack, so a well-travelled hunter ends up noticeably tougher. The individual numbers are small on purpose. Finishing every vanilla entry adds about 8 Max Health in total.
+### 5. Take a bounty
 
-<insert picture of the Rewards tab here>
+Craft a Bounty Board from three paper across the top, any sign in the middle, and a stick below. Place it anywhere and click the board. Each poster shows the creature, "Slay 5", and the rewards. The poster always names the creature, even if your book still shows ???. Click Accept and the hunt is on.
 
-### Kill credit
-
-Everyone who took part in a fight gets credit for the kill, including the owner of a pet or summon and anyone who healed the group. A party hunt moves everyone's book forward, not just whoever landed the last hit. This is what SilverLib is for.
+Every kill reports in on the action bar: "Bounty: 2 of 5 slain." Finish it and the rewards are yours, with a "Bounty Claimed" toast. Then the board goes quiet for a while before it posts again, and the footer tells you how long. Abandoning a bounty is allowed by default, with a longer wait after.
 
 ### Advancements
 
 Three advancements mark the big moments: "A Hunter's First Page" when you record your first creature, "Nothing Left to Learn" when you finish an entry, and "Master of Beasts" when every entry is complete. They are trophies only. Nothing is gated behind them.
 
-### What's included
+---
+
+## What's Included
 
 The built-in datapack covers 54 vanilla creatures: every hostile mob, the bosses, and the livestock and fish players normally kill. Pets, villagers, golems, and peaceful creatures like axolotls and turtles are left out on purpose, since rewarding their deaths would encourage it.
 
 Creatures are classed as normal, Elite, Minor Boss, or Major Boss. The tougher the class, the fewer kills each milestone takes and the bigger the rewards. A zombie takes 250 kills to complete. The Ender Dragon takes 5.
 
----
-
-## Bounties
-
-The Bounty Board is a standing sign that posts hunts. Craft it from three paper across the top, any sign in the middle, and a stick below, then place it anywhere. The postings are shared by the whole server, so friends can take the same bounty and hunt it together. Progress, the active bounty, and cooldowns are per player.
-
-<insert picture of the bounty board with three WANTED posters here>
-
-### Taking a bounty
-
-Each posting is a WANTED poster showing the creature's model and name, "Slay 5", and the rewards: "+150 XP" and the items as icons. The poster always names the creature, even if your book still shows it as ???. Click Accept and it becomes your active bounty. You can hold one bounty at a time, and the board shows that one poster with "2 of 5 slain" until you finish it.
-
-Every kill of the target updates the action bar: "Bounty: 2 of 5 slain." Completing the bounty gives you the rewards, plays a short sound, and shows a "Bounty Claimed" toast.
-
-<insert picture of an active bounty poster showing "2 of 5 slain" here>
-
-### How bounties feed the bestiary
-
-A completed bounty counts as a claimed bounty in your bestiary and adds bonus kills to that creature's entry. Milestones can require claimed bounties, not just kills, so a pack can make the board part of the progression rather than a side activity. The vanilla pack does not gate anything behind bounties yet, but the hook is there.
-
-### Refresh and cooldowns
-
-Postings change once a Minecraft day by default. After you complete or abandon a bounty, the board goes quiet for a while and the footer tells you when to come back: "More bounties should arrive in 10 minutes." Abandoning can be turned off entirely in the config.
-
-Bounties are posted for the hostiles and bosses only. Rewards are themed to the creature and sized to its class: common mobs pay in iron, Nether mobs and the rarer undead in gold, illagers in emeralds, creepers and endermen in diamonds, and bosses in netherite and diamonds, with experience to match.
+Bounties are included for the hostiles and bosses. Rewards are themed to the creature and sized to its class: common mobs pay in iron, Nether mobs and the rarer undead in gold, illagers in emeralds, creepers and endermen in diamonds, and bosses in netherite and diamonds, with experience to match.
 
 ---
 
-## Tracking
-
-Tracking lets a seasoned hunter sense and chase the creatures they know best. Once a creature's entry unlocks it, a Track button appears on its Tracking & Bounties tab. You track one creature at a time, and an eye icon marks it in the list.
-
-There are two kinds of tracking, each with three levels earned through milestones. The book describes each level in plain words, so you know what you have learned without reading a config file.
-
-### Passive Sense
-
-Every so often, if the tracked creature is nearby, a short message tells you where it is.
-
-| Level | What you sense |
-|---|---|
-| **Scent** | Whether it is close and roughly which way: "You sense the Zombie to the left." |
-| **Trail** | A finer direction and about how far: "You're tracking the Zombie about 30 blocks away, ahead to the left." |
-| **Track** | The same, from further off, and a wisp of light spirals away from you toward it. |
-
-The wisp points the way without marking the creature itself. It stops well short, so the last stretch is still a hunt.
-
-<insert picture of the wisp trail here>
-
-### Active Hunt
-
-Hold the hunt key (G by default, rebindable) for two seconds. A compass appears above your hotbar and points the way to the nearest tracked creature, with an up or down marker when it is above or below you. A timer counts the hunt down. When it ends the trail goes cold and the timer shows how long until you can hunt again.
-
-| Level | What you get |
-|---|---|
-| **Hunt** | The compass. |
-| **Sight** | The compass, and once the nearest creature is close it glows through walls for your eyes only. A shorter cooldown. |
-| **Mark** | The compass reaches further and every creature of that type nearby glows. The shortest cooldown. |
-
-<insert picture of the hunt compass with a glowing creature here>
-
-All of the ranges, timers, and cooldowns are configurable. The book never shows numbers for these, so changing the config never makes it wrong.
-
----
-
-## Setting Up Your Own Content
+## Datapacks
 
 Everything about a creature lives in the datapack. The mod works for any living entity, including those from other mods. Add a file for it and it is tracked.
 
@@ -224,8 +188,8 @@ One file per creature at `data/<namespace>/bounty/<entity>.json`, named the same
   "weight": 10,
   "bonus_kills": 4,
   "rewards": [
-    { "type": "item", "item": "minecraft:emerald", "count": 3 },
-    { "type": "experience", "amount": 60 }
+    { "type": "item", "item": "minecraft:iron_ingot", "count": 15 },
+    { "type": "experience", "amount": 150 }
   ]
 }
 ```
@@ -253,7 +217,7 @@ The vanilla content is a built-in datapack, enabled by default. If you want to s
 /datapack disable "mod/beasts_and_bounties:builtin_data_packs/vanilla_bestiary"
 ```
 
-Only kill and bounty counts are saved on the player. Everything else is computed from the datapack, so you can change your data and run `/reload` and every player is right with no migration.
+Only kill and bounty counts are saved on the player. Everything else is computed from the datapack, so you can change your data, run `/reload`, and every player is right with no migration.
 
 ---
 
@@ -342,3 +306,5 @@ All `/bestiary` commands need operator level 2.
 - Minecraft 1.21.1
 - NeoForge
 - [SilverLib](https://www.curseforge.com/minecraft/mc-mods/silverlib)
+
+Install on both the client and the server.

@@ -31,13 +31,17 @@ public class TrackingGameTests {
     @GameTest(template = "empty")
     public static void trackingUnlocksArePrecomputedPerMilestone(GameTestHelper helper) {
         BestiaryEntry skeleton = BestiaryEntries.get(EntityType.SKELETON);
-        Bonuses before = skeleton.bonuses(new Progress(24, 0));
-        Bonuses scent = skeleton.bonuses(new Progress(25, 0));
-        Bonuses firstHunt = skeleton.bonuses(new Progress(100, 0));
-        Bonuses complete = skeleton.bonuses(new Progress(250, 0));
-        helper.assertTrue(before.passiveTracking() == 0 && !before.hasTracking(), "no tracking before 25 kills");
-        helper.assertTrue(scent.passiveTracking() == 1 && scent.activeTracking() == 0, "passive 1 at 25 kills");
-        helper.assertTrue(firstHunt.passiveTracking() == 2 && firstHunt.activeTracking() == 1, "passive 2 and active 1 at 100 kills");
+        Bonuses before = skeleton.bonuses(new Progress(64, 0));
+        Bonuses scent = skeleton.bonuses(new Progress(65, 0));
+        Bonuses firstHunt = skeleton.bonuses(new Progress(220, 0));
+        Bonuses gated = skeleton.bonuses(new Progress(500, 0));
+        Bonuses oneBounty = skeleton.bonuses(new Progress(500, 1));
+        Bonuses complete = skeleton.bonuses(new Progress(500, 2));
+        helper.assertTrue(before.passiveTracking() == 0 && !before.hasTracking(), "no tracking before 65 kills");
+        helper.assertTrue(scent.passiveTracking() == 1 && scent.activeTracking() == 0, "passive 1 at 65 kills");
+        helper.assertTrue(firstHunt.passiveTracking() == 2 && firstHunt.activeTracking() == 1, "passive 2 and active 1 at 220 kills");
+        helper.assertTrue(gated.passiveTracking() == 2 && gated.activeTracking() == 2, "passive 3 waits for a bounty however many kills");
+        helper.assertTrue(oneBounty.passiveTracking() == 3 && oneBounty.activeTracking() == 2, "one bounty unlocks passive 3, active 3 needs a second");
         helper.assertTrue(complete.passiveTracking() == 3 && complete.activeTracking() == 3, "both reach 3 when complete");
         helper.succeed();
     }
@@ -119,7 +123,7 @@ public class TrackingGameTests {
         PlayerTracking.track(player, skeleton);
         helper.assertTrue(PlayerTracking.state(player).isEmpty(), "tracking a creature with nothing unlocked is refused");
 
-        BestiaryProgress.all(player).put(skeleton, new Progress(25, 0));
+        BestiaryProgress.all(player).put(skeleton, new Progress(65, 0));
         PlayerTracking.track(player, skeleton);
         helper.assertTrue(PlayerTracking.state(player).flatMap(TrackingState::creature).equals(Optional.of(skeleton)), "tracking starts once unlocked");
 

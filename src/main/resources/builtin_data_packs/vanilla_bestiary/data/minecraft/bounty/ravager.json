@@ -1,21 +1,21 @@
 {
-  "kills": 3,
-  "weight": 4,
-  "bonus_kills": 2,
+  "kills": 2,
+  "weight": 3,
+  "bonus_kills": 5,
   "rewards": [
     {
       "type": "item",
       "item": "minecraft:diamond",
-      "count": 4
+      "count": 5
     },
     {
       "type": "item",
       "item": "minecraft:gold_ingot",
-      "count": 16
+      "count": 20
     },
     {
       "type": "experience",
-      "amount": 350
+      "amount": 450
     }
   ]
 }

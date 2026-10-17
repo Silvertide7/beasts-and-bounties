@@ -85,6 +85,6 @@ public final class BestiaryProgress {
     }
 
     private static int saturatingAdd(int current, int amount) {
-        return (int) Math.max(0, Math.min(Integer.MAX_VALUE, (long) current + amount));
+        return Math.clamp((long) current + amount, 0, Integer.MAX_VALUE);
     }
 }

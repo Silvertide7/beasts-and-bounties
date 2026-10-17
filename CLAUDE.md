@@ -9,7 +9,7 @@ about the creature (name, 3D model, stats, weaknesses, where it lives, notes) an
 It works for any living entity, but the shipped content is aimed at hostile mobs.
 
 The **bounty board** (see Bounties) posts per-player hunts; completing one credits that creature's
-bestiary progress with a bounty and bonus kills, and milestones can require bounties.
+bestiary progress with a bounty and bonus kills (10 / 5 / 1 / 1 by classification), and milestones can require bounties.
 
 ## Design principles
 
@@ -97,8 +97,9 @@ a bounty **blocks every milestone after it** until the bounty is claimed, howeve
 player has. That makes the bounty system required past a chosen point. Two consequences:
 - A milestone with only `bounties` (0 kills) sorts first and gates the whole entry. To gate late
   progress, give the bounty milestone a kill count too: `{"kills": 25, "bounties": 1}`.
-- The vanilla pack has no bounty requirements yet. Bounties can't be claimed until the bounty system
-  exists, so gating vanilla now would freeze progress (admins could still use commands).
+- The vanilla pack gates only the last two tracking levels on bounties (one for P3, a second for
+  A3), so everything else is reachable by kills alone and the bounty board becomes required only
+  for the top of each entry.
 
 "Text" means a vanilla `Component` (`ComponentSerialization.CODEC`), either a plain string or
 `{"translate": ...}`. Shipped entries use translate keys. Pack authors can use plain strings.
@@ -179,7 +180,7 @@ src/main/java/net/silvertide/beasts_and_bounties/
     BountyConfig                refresh period, offers shown, claim/abandon cooldowns, allowAbandon
     BountyDefinition, BountyReward   one bounty per entity: kills, weight, bonus_kills, item/experience rewards
     BountyDefinitions           SimpleJsonResourceReloadListener over data/<ns>/bounty (top pack wins)
-    BountyOffers, BoardRerolls  deterministic weighted picks per (world seed, refresh period, world reroll count); the shared board
+    BountyOffers, BountyBoardData  the shared board: weighted picks per (world seed, refresh period, reroll count), never repeating the previous board; saved data
     BountyState                 record(active bounty?, cooldownEndsAt) with the accept/kill/end rules
     PlayerBounties              player attachment; openBoard / accept / abandon / recordKill / complete
     BountyEvents                reload listener, join sync, death → recordKill for every participant
@@ -219,21 +220,35 @@ classification ends on the same totals.
 
 | Classification | Information (kills → reveals) | Final milestone | Totals at the final milestone |
 |---|---|---|---|
-| normal | 1 listed · 2 name, model, type · 5 description, stats, attacks · 10 habitat · 15 strengths · 25 weaknesses · 40 notes | 250 | +10% damage, 10% resistance, 100% extra loot, +50% XP, 1× attribute |
-| elite | 1 name, model, type · 3 description, stats, attacks · 5 habitat · 8 strengths · 12 weaknesses · 18 notes | 150 | +15% damage, 15% resistance, 100% extra loot, +50% XP, 2× attribute |
-| minor_boss | 1 identity, description, stats, attacks · 2 habitat, strengths · 3 weaknesses · 4 notes | 10 | +10% damage, 10% resistance, 100% extra loot, +50% XP, 4× attribute |
-| major_boss | 1 everything but lore · 2 strengths, weaknesses · 3 notes | 5 | +20% damage, 20% resistance, 100% extra loot, +50% XP, 8× attribute |
+| normal | 1 listed · 2 name, model, type · 5 description, stats, attacks · 10 habitat · 15 strengths · 30 weaknesses · 50 notes | 500 kills + 2 bounties | +10% damage, 10% resistance, 100% extra loot, +50% XP, 1× attribute |
+| elite | 1 name, model, type · 3 description, stats, attacks · 5 habitat · 8 strengths · 12 weaknesses · 16 notes | 200 kills + 2 bounties | +15% damage, 15% resistance, 100% extra loot, +50% XP, 2× attribute |
+| minor_boss | 1 identity, description, stats, attacks · 2 habitat, strengths · 3 weaknesses · 4 notes | 25 kills + 2 bounties | +10% damage, 10% resistance, 100% extra loot, +50% XP, 4× attribute |
+| major_boss | 1 everything but lore · 2 strengths, weaknesses · 3 notes | 15 kills + 2 bounties | +20% damage, 20% resistance, 100% extra loot, +50% XP, 8× attribute |
 
-Reward steps:
-- **normal:** milestones at 1, 2, 5, 10, 15, 25, 40, 60, 80, 100, 125, 150, 175, 200, 250. Damage
-  +2% at 15, 40, 80, 125, 175. Resistance 2% at 25, 60, 100, 150, 200. Extra loot +10% and XP +5% at
-  10, 25, 60, 80, 100, 125, 150, 175, 200, 250.
-- **elite:** 1, 3, 5, 8, 12, 18, 25, 35, 45, 60, 75, 90, 110, 150. Damage +3% at 8, 18, 35, 60, 90.
-  Resistance 3% at 12, 25, 45, 75, 110. Loot +10% and XP +5% at 5, 12, 25, 35, 45, 60, 75, 90, 110, 150.
-- **minor_boss:** 1–8 and 10. Loot +20% and XP +10% at 1, then +10% and +5% at every later milestone.
-  Damage +2.5% at 2, 4, 6, 8. Resistance 2.5% at 3, 5, 7, 10. Attribute half at 5, half at 10.
-- **major_boss:** 1–5. Loot +20% and XP +10% at every milestone. Damage +5% at 1, 3, 4, 5. Resistance
-  5% at 2, 3, 4, 5. Attribute half at 3, half at 5.
+The schedules are generated: each entry's text and themed attribute are kept and its milestones are
+laid out by classification so that **no milestone unlocks much at once**, rewards arrive more often
+the further in you are, and **the six tracking levels never share a milestone and always come in the
+order P1, P2, A1, A2, P3, A3**. **P3 requires one bounty claimed and A3 a second** (`"bounties": 1`
+and `2` on those milestones), which is the only bounty gating in the vanilla pack. Milestones:
+- **normal (22):** 1, 2, 5, 10, 15, 20, 30, 40, 50, 65, 80, 100, 120, 150, 180, 220, 260, 300, 350,
+  400 (b1), 450, 500 (b2). Damage +2% at 40, 120, 260, 400, 500. Resistance 2% at 80, 180, 300,
+  350, 450. Loot +10% at 10, 20, 80, 100, 150, 220, 300, 350, 400, 450. XP +5% at 65, 100, 120,
+  180, 260, 300, 350, 400, 450, 500. Tracking P1 65 · P2 150 · A1 220 · A2 300 · P3 400 · A3 500.
+  Attribute at 500.
+- **elite (19):** 1, 3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 60, 75, 90, 110, 130, 150 (b1), 175,
+  200 (b2). Damage +3% at 12, 30, 75, 130, 175. Resistance 3% at 25, 50, 90, 150, 200. Loot +10%
+  at 5, 25, 40, 60, 75, 110, 130, 150, 175, 200. XP +5% at 20, 30, 40, 50, 75, 90, 110, 130, 175,
+  200. Tracking P1 20 · P2 40 · A1 60 · A2 90 · P3 150 · A3 200. Attribute at 200.
+- **minor_boss (15):** 1–6, 8, 10, 12, 14, 16, 18 (b1), 20, 22, 25 (b2). Loot +20% and XP +10% at
+  1, then +10% / +5% steps. Damage +2.5% at 3, 6, 14, 20. Resistance 2.5% at 4, 10, 16, 22.
+  Tracking P1 2 · P2 5 · A1 8 · A2 12 · P3 18 · A3 25. Attribute half at 14, half at 25.
+- **major_boss (11):** 1–8, 10 (b1), 12, 15 (b2). Loot +20% at 1, 3, 5, 7, 10; XP +10% at 1, 4, 6,
+  8, 12. Damage +5% at 1, 4, 7, 12. Resistance 5% at 2, 5, 8, 12. Tracking P1 2 · P2 3 · A1 4 ·
+  A2 6 · P3 10 · A3 15. Attribute half at 7, half at 15.
+
+Mobs that deal no damage get no resistance rewards and no attack patterns (the generator keeps an
+entry's existing choice). To regenerate after a schedule change, rebuild from each file's merged
+text and attribute the way the one-off script did; there is no checked-in generator.
 
 **Every entry grants one themed attribute**, sized by classification. Each attribute has a normal
 "unit"; elites give 2×, minor bosses 4× and major bosses 8×. Normal and elite entries grant it at
@@ -278,9 +293,9 @@ armor 4 / 10 / 16. Speed was always judged as a tier.
 Attack patterns always unlock with the stats, whichever milestone that is for the classification.
 Mobs with no combat behaviour (chickens, cows, villagers and the like) have none.
 
-Resistance is only granted against mobs that deal damage. The dev fast zombie is a copy with its 15
-milestones at kills 1–15, except its final reward is +5 max health instead of the zombie's +0.5. Don't
-regenerate it blindly from the vanilla file.
+Resistance is only granted against mobs that deal damage. The dev fast zombie is a copy with its 22
+milestones at kills 1–22, **no bounty gating**, and +5 max health at the end instead of the zombie's
++0.5, so a dev run can max it with kills alone.
 
 ### Kill credit
 
@@ -560,12 +575,12 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   **Bounty text is the exception**: the poster, "Bounty accepted" and the Bounty Claimed toast use
   the entity type's own name (`EntityType.getDescription()`) whatever the player has learned,
   because a board asking you to slay "???" makes no sense; the poster's model is shown too.
-- **Vanilla pack placement** (kills for P1, P2, A1, P3, A2, A3):
-  - normal: 25, 60, 100, 150, 200, 250
-  - elite: 12, 35, 60, 90, 110, 150
-  - minor boss: 2, 3, 4, 6, 8, 10
-  - major boss: 1, 2, 2, 3, 4, 5
-  - dev zombie: kills 3–8.
+- **Vanilla pack placement** (kills for P1, P2, A1, A2, P3, A3; P3 also needs 1 bounty, A3 2):
+  - normal: 65, 150, 220, 300, 400, 500
+  - elite: 20, 40, 60, 90, 150, 200
+  - minor boss: 2, 5, 8, 12, 18, 25
+  - major boss: 2, 3, 4, 6, 10, 15
+  - dev zombie: kills 10, 14, 16, 18, 20, 22 (no bounties).
 - **Sprites**: `tracking_ring` (generated, 44×44, faint white circle), `tracking_arrow`,
   `tracking_up` / `tracking_down` and `tracking_timer` are placeholders; `tracked_eye` is hand-drawn,
   9×9, drawn at native size centred in the 11 px list row;
@@ -599,8 +614,8 @@ walks a mock player through all three.
 - `/bestiary get <target> <entity>` prints kills, bounties and milestone `n of m`.
 - `/bestiary complete <targets> [entity]` raises progress to the final milestone's requirement (never
   lowers it) for one entry or every loaded entry. Use it to test a maxed-out bestiary.
-- `/bestiary board reroll` gives **everyone** new postings now (the world-wide `BoardRerolls`
-  saved-data counter salts the offer seed), and `/bestiary board clear <targets>` drops the
+- `/bestiary board reroll` gives **everyone** new postings now (the world-wide `BountyBoardData`
+  reroll counter salts the offer seed, and the new board excludes the old one's creatures), and `/bestiary board clear <targets>` drops the
   targets' active bounty and cooldown. Registered by `BountyCommand`; Brigadier merges its `bestiary` literal with the
   bestiary feature's.
 
@@ -617,6 +632,15 @@ change syncs the client and reapplies attributes when the reached milestone chan
 ```
 
 There is no datagen and no `data` run config.
+
+- **CI**: `.github/workflows/build.yml` builds every push and pull request; `publish.yml` runs
+  `./gradlew publishMods` on a published GitHub release (or by hand with a dry-run option that
+  posts to the test Discord webhook instead). Publishing is CurseForge only, through the
+  mod-publish-plugin block in `build.gradle`: it uploads the jar with the `CHANGELOG.md` text as
+  the changelog, `silverlib` as a required dependency and `project-mmo` optional. The project id
+  lives in `gradle.properties` as `curseforge_project` (1693724) and
+  the secrets are `CF_TOKEN`, `DISCORD_WEBHOOK_URL` and `DISCORD_WEBHOOK_TEST_URL`. Same setup
+  as Mortal Boons minus Modrinth.
 
 - Versions come from `gradle.properties` only. `neoforge.mods.toml` is a **template** in
   `src/main/templates/META-INF/` and gets expanded at build time.
@@ -699,22 +723,30 @@ is only where you look. One bounty is active at a time.
   the XP to give it, see the PMMO bridge below). A file whose entity doesn't exist is skipped with a
   WARN; one whose entity has **no bestiary entry** loads but is never offered (checked at offer
   time, because reload-listener order isn't guaranteed). Shipped in the vanilla pack for hostiles
-  and bosses only. Kills / weight / bonus kills / XP by classification: normal 5 / 10 / +4 / 150;
-  elite 3 / 4 / +2 / 350; minor boss 1 / 2 / +2 / 800; major boss 1 / 1 / +1 / 1500 (from level
-  20 that is about 2.5, 5, 11 and 18 levels; vanilla's per-level cost is 2L+7 up to 15, 5L−38 to
-  30, 9L−158 after). Items are themed per creature, ingots and gems only (never blocks), one or two
-  kinds each so the poster's icon row stays short, and sized to be worth the trip (15 iron is more
-  than a vein): normals give 15 iron ingots (zombie, skeleton, spider, cave spider, silverfish,
-  slime), 10 gold ingots (husk, stray, drowned, magma cube, piglin, zombified piglin, hoglin,
-  zoglin), 10 emeralds (zombie villager, vindicator, witch, pillager, vex, bogged, guardian) or
-  3 diamonds (creeper, enderman, endermite, blaze, ghast, shulker, phantom); every elite gives
-  4 diamonds plus 16 of its theme (iron for wither skeleton and breeze, gold for ravager and
-  piglin brute, emeralds for evoker and illusioner); minor bosses give netherite ingots + diamonds
-  (elder guardian 2 + 10, warden 3 + 12); major bosses more of both (wither 4 + 16, ender dragon 5 + 20).
+  and bosses only, **tuned per creature** rather than per classification: kills, weight, XP and
+  item counts all vary with how common the creature is, how hard it is to kill, how many the
+  posting asks for and how hard it is to find. The spread: normals ask 2–8 kills for 100–300 XP
+  and 12–16 iron / 8–14 gold / 8–12 emeralds / 2–4 diamonds (zombie 8 kills, 12 iron, 100 XP at
+  the cheap end; endermite 2 kills, 4 diamonds, 260 XP and shulker 4 kills, 4 diamonds, 300 XP at
+  the dear end); elites ask 1–4 kills for 350–700 XP and 4–8 diamonds plus 12–24 of their theme
+  (iron for wither skeleton and breeze, gold for ravager and piglin brute, emeralds for evoker and
+  illusioner); minor bosses 800 / 1000 XP with 2 / 3 netherite + 10 / 12 diamonds (elder guardian,
+  warden); major bosses 1500 / 2000 XP with 4 / 5 netherite + 16 / 20 diamonds (wither, ender
+  dragon). Weights follow commonness (12 for zombie, creeper, skeleton, spider; 3 for zoglin,
+  endermite, ravager, evoker; 1 for the bosses and the illusioner, which never spawns naturally).
+  Bonus kills are per classification: **+10 for normals, +5 for elites, +1 for bosses**, on top of the real kill and the +1 bounty. Items are ingots and gems only, never
+  blocks, at most two kinds per bounty so the poster's icon row stays short. From level 20, 100 XP
+  is about 1.5 levels and 2000 about 22 (vanilla's per-level cost is 2L+7 up to 15, 5L−38 to 30,
+  9L−158 after). The numbers live in the JSON files; `everyShippedBountyMatchesAnEntry` pins the
+  zombie's.
 - **Offers** (`BountyOffers.pick`): `offersShown` distinct weighted picks from a `RandomSource`
-  seeded by the overworld seed, `gameTime / refreshTicks` and the world's reroll count
-  (`BoardRerolls`, a `SavedData` on the overworld, bumped only by the admin command), so the same
-  period gives every player the same postings and nothing per player is stored. The server sends them when the board opens
+  seeded by the overworld seed, `gameTime / refreshTicks` and the world's reroll count, so the same
+  period gives every player the same postings. **A new board never repeats the previous one**:
+  `BountyBoardData` (a `SavedData` on the overworld) remembers the reroll count plus the last
+  board's period, reroll count and creature ids; `current()` returns the remembered ids while
+  they are current and otherwise picks with those ids excluded (unless that would leave fewer
+  candidates than `offersShown`) and records the result. Weights (`weight` in each bounty file)
+  make common creatures show up more and rare ones less. The server sends them when the board opens
   (`BoardOpened(offers, periodEndsAt, state)`, each offer carrying the kills, item stacks, XP and
   habitat text the card shows) and recomputes them to validate `AcceptBounty`.
 - **State**: attachment `bounty` = `BountyState(Optional<ActiveBounty(entityId, killsRequired,

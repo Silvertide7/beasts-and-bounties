@@ -10,6 +10,7 @@ import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntries;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public final class BountyOffers {
     public record Offer(ResourceLocation entityId, BountyDefinition definition) {}
@@ -17,8 +18,15 @@ public final class BountyOffers {
     private BountyOffers() {}
 
     public static List<Offer> current(MinecraftServer server, long now) {
-        return pick(server.overworld().getSeed(), now / BountyConfig.refreshTicks(), BoardRerolls.of(server).count(),
-                BountyConfig.OFFERS_SHOWN.get(), BountyDefinitions.all());
+        BountyBoardData board = BountyBoardData.of(server);
+        long period = now / BountyConfig.refreshTicks();
+        Map<ResourceLocation, BountyDefinition> definitions = BountyDefinitions.all();
+        if (board.isCurrent(period)) {
+            return board.offers().stream().filter(definitions::containsKey).map(id -> new Offer(id, definitions.get(id))).toList();
+        }
+        List<Offer> picked = pick(server.overworld().getSeed(), period, board.rerolls(), BountyConfig.OFFERS_SHOWN.get(), definitions, Set.copyOf(board.offers()));
+        board.record(period, picked.stream().map(Offer::entityId).toList());
+        return picked;
     }
 
     public static long periodEndsAt(long now) {
@@ -26,11 +34,12 @@ public final class BountyOffers {
         return (now / refresh + 1) * refresh;
     }
 
-    static List<Offer> pick(long worldSeed, long period, int rerolls, int count, Map<ResourceLocation, BountyDefinition> definitions) {
+    static List<Offer> pick(long worldSeed, long period, int rerolls, int count, Map<ResourceLocation, BountyDefinition> definitions, Set<ResourceLocation> previousOffers) {
         List<WeightedEntry.Wrapper<Offer>> candidates = new ArrayList<>();
         definitions.forEach((entityId, definition) -> {
             if (BestiaryEntries.get(entityId) != null) candidates.add(WeightedEntry.wrap(new Offer(entityId, definition), definition.weight()));
         });
+        if (candidates.size() - previousOffers.size() >= count) candidates.removeIf(candidate -> previousOffers.contains(candidate.data().entityId()));
         RandomSource random = RandomSource.create(period * 0x9E3779B97F4A7C15L ^ worldSeed ^ rerolls * 0xC2B2AE3D27D4EB4FL);
         List<Offer> offers = new ArrayList<>();
         while (offers.size() < count && !candidates.isEmpty()) {

@@ -1,7 +1,7 @@
 {
-  "kills": 3,
+  "kills": 2,
   "weight": 4,
-  "bonus_kills": 2,
+  "bonus_kills": 5,
   "rewards": [
     {
       "type": "item",
@@ -11,11 +11,11 @@
     {
       "type": "item",
       "item": "minecraft:gold_ingot",
-      "count": 16
+      "count": 20
     },
     {
       "type": "experience",
-      "amount": 350
+      "amount": 420
     }
   ]
 }

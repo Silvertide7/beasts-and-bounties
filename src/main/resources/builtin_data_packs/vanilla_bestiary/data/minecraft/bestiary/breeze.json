@@ -42,10 +42,6 @@
         {
           "type": "extra_loot",
           "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
         }
       ]
     },
@@ -57,12 +53,6 @@
         },
         {
           "translate": "bestiary.beasts_and_bounties.breeze.strengths.1"
-        }
-      ],
-      "rewards": [
-        {
-          "type": "damage_bonus",
-          "amount": 0.03
         }
       ]
     },
@@ -81,25 +71,13 @@
       ],
       "rewards": [
         {
-          "type": "damage_resistance",
+          "type": "damage_bonus",
           "amount": 0.03
-        },
-        {
-          "type": "extra_loot",
-          "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
-        },
-        {
-          "type": "passive_tracking",
-          "level": 1
         }
       ]
     },
     {
-      "kills": 18,
+      "kills": 16,
       "notes": [
         {
           "translate": "bestiary.beasts_and_bounties.breeze.notes.0"
@@ -107,11 +85,18 @@
         {
           "translate": "bestiary.beasts_and_bounties.breeze.notes.1"
         }
-      ],
+      ]
+    },
+    {
+      "kills": 20,
       "rewards": [
         {
-          "type": "damage_bonus",
-          "amount": 0.03
+          "type": "passive_tracking",
+          "level": 1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
         }
       ]
     },
@@ -125,44 +110,45 @@
         {
           "type": "extra_loot",
           "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
         }
       ]
     },
     {
-      "kills": 35,
+      "kills": 30,
       "rewards": [
         {
           "type": "damage_bonus",
           "amount": 0.03
         },
         {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 40,
+      "rewards": [
+        {
+          "type": "passive_tracking",
+          "level": 2
+        },
+        {
           "type": "extra_loot",
           "chance": 0.1
         },
         {
           "type": "bonus_experience",
           "amount": 0.05
-        },
-        {
-          "type": "passive_tracking",
-          "level": 2
         }
       ]
     },
     {
-      "kills": 45,
+      "kills": 50,
       "rewards": [
         {
           "type": "damage_resistance",
           "amount": 0.03
-        },
-        {
-          "type": "extra_loot",
-          "chance": 0.1
         },
         {
           "type": "bonus_experience",
@@ -174,20 +160,12 @@
       "kills": 60,
       "rewards": [
         {
-          "type": "damage_bonus",
-          "amount": 0.03
+          "type": "active_tracking",
+          "level": 1
         },
         {
           "type": "extra_loot",
           "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
-        },
-        {
-          "type": "active_tracking",
-          "level": 1
         }
       ]
     },
@@ -195,9 +173,39 @@
       "kills": 75,
       "rewards": [
         {
+          "type": "damage_bonus",
+          "amount": 0.03
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 90,
+      "rewards": [
+        {
+          "type": "active_tracking",
+          "level": 2
+        },
+        {
           "type": "damage_resistance",
           "amount": 0.03
         },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 110,
+      "rewards": [
         {
           "type": "extra_loot",
           "chance": 0.1
@@ -209,7 +217,7 @@
       ]
     },
     {
-      "kills": 90,
+      "kills": 130,
       "rewards": [
         {
           "type": "damage_bonus",
@@ -222,20 +230,30 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
-        },
-        {
-          "type": "passive_tracking",
-          "level": 3
         }
       ]
     },
     {
-      "kills": 110,
+      "kills": 150,
+      "bounties": 1,
       "rewards": [
+        {
+          "type": "passive_tracking",
+          "level": 3
+        },
         {
           "type": "damage_resistance",
           "amount": 0.03
         },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 175,
+      "rewards": [
         {
           "type": "extra_loot",
           "chance": 0.1
@@ -245,14 +263,23 @@
           "amount": 0.05
         },
         {
-          "type": "active_tracking",
-          "level": 2
+          "type": "damage_bonus",
+          "amount": 0.03
         }
       ]
     },
     {
-      "kills": 150,
+      "kills": 200,
+      "bounties": 2,
       "rewards": [
+        {
+          "type": "active_tracking",
+          "level": 3
+        },
+        {
+          "type": "damage_resistance",
+          "amount": 0.03
+        },
         {
           "type": "extra_loot",
           "chance": 0.1
@@ -266,10 +293,6 @@
           "attribute": "minecraft:generic.jump_strength",
           "amount": 0.02,
           "operation": "add_multiplied_base"
-        },
-        {
-          "type": "active_tracking",
-          "level": 3
         }
       ]
     }

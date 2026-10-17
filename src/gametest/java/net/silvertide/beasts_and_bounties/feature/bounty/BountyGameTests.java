@@ -24,6 +24,8 @@ import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryProgress;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Progress;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.Set;
 import java.util.Optional;
 
 @GameTestHolder(BeastsAndBountiesMod.MODID)
@@ -37,7 +39,7 @@ public class BountyGameTests {
         helper.assertTrue(BountyDefinitions.all().size() == SHIPPED_BOUNTIES, "expected " + SHIPPED_BOUNTIES + " bounties, loaded " + BountyDefinitions.all().size());
         BountyDefinitions.all().keySet().forEach(entityId -> helper.assertTrue(BestiaryEntries.get(entityId) != null, entityId + " has a bounty but no entry"));
         BountyDefinition zombie = BountyDefinitions.all().get(ZOMBIE);
-        helper.assertTrue(zombie.kills() == 5 && zombie.bonusKills() == 4 && zombie.experienceReward() == 150 && zombie.itemRewards().getFirst().is(Items.IRON_INGOT) && zombie.itemRewards().getFirst().getCount() == 15, "zombie bounty values");
+        helper.assertTrue(zombie.kills() == 8 && zombie.bonusKills() == 10 && zombie.experienceReward() == 100 && zombie.itemRewards().getFirst().is(Items.IRON_INGOT) && zombie.itemRewards().getFirst().getCount() == 12, "zombie bounty values");
         helper.succeed();
     }
 
@@ -55,17 +57,20 @@ public class BountyGameTests {
 
     @GameTest(template = "empty")
     public static void offersAreStableWithinAPeriodAndChangeAcrossPeriods(GameTestHelper helper) {
-        List<BountyOffers.Offer> first = BountyOffers.pick(42, 1, 0, 3, BountyDefinitions.all());
-        List<BountyOffers.Offer> again = BountyOffers.pick(42, 1, 0, 3, BountyDefinitions.all());
+        List<BountyOffers.Offer> first = BountyOffers.pick(42, 1, 0, 3, BountyDefinitions.all(), Set.of());
+        List<BountyOffers.Offer> again = BountyOffers.pick(42, 1, 0, 3, BountyDefinitions.all(), Set.of());
         helper.assertTrue(first.size() == 3, "three offers are shown");
         helper.assertTrue(first.stream().map(BountyOffers.Offer::entityId).distinct().count() == 3, "offers are distinct");
         helper.assertTrue(first.equals(again), "the same period gives the same offers");
         boolean anyDifferent = false;
-        for (long period = 2; period <= 6; period++) anyDifferent |= !BountyOffers.pick(42, period, 0, 3, BountyDefinitions.all()).equals(first);
+        for (long period = 2; period <= 6; period++) anyDifferent |= !BountyOffers.pick(42, period, 0, 3, BountyDefinitions.all(), Set.of()).equals(first);
         helper.assertTrue(anyDifferent, "later periods give different offers");
         boolean anyRerollDiffers = false;
-        for (int rerolls = 1; rerolls <= 5; rerolls++) anyRerollDiffers |= !BountyOffers.pick(42, 1, rerolls, 3, BountyDefinitions.all()).equals(first);
+        for (int rerolls = 1; rerolls <= 5; rerolls++) anyRerollDiffers |= !BountyOffers.pick(42, 1, rerolls, 3, BountyDefinitions.all(), Set.of()).equals(first);
         helper.assertTrue(anyRerollDiffers, "a reroll gives different offers in the same period");
+        Set<ResourceLocation> firstIds = first.stream().map(BountyOffers.Offer::entityId).collect(Collectors.toSet());
+        List<BountyOffers.Offer> next = BountyOffers.pick(42, 2, 0, 3, BountyDefinitions.all(), firstIds);
+        helper.assertTrue(next.stream().noneMatch(offer -> firstIds.contains(offer.entityId())), "the next board never repeats the previous one");
         ServerPlayer one = helper.makeMockServerPlayerInLevel();
         ServerPlayer two = helper.makeMockServerPlayerInLevel();
         long now = helper.getLevel().getGameTime();
@@ -115,10 +120,12 @@ public class BountyGameTests {
         helper.assertTrue(PlayerBounties.state(player).canAccept(now), "board clear drops the cooldown");
         helper.assertTrue(PlayerBounties.state(player).equals(BountyState.NONE), "a cleared player stores nothing");
 
-        int rerollsBefore = BoardRerolls.of(player.server).count();
+        int rerollsBefore = BountyBoardData.of(player.server).rerolls();
         commands.performPrefixedCommand(source, "bestiary board reroll");
-        helper.assertTrue(BoardRerolls.of(player.server).count() == rerollsBefore + 1, "reroll bumps the world counter");
-        helper.assertTrue(!BountyOffers.current(player.server, now).equals(before), "rerolled postings differ for everyone");
+        helper.assertTrue(BountyBoardData.of(player.server).rerolls() == rerollsBefore + 1, "reroll bumps the world counter");
+        List<BountyOffers.Offer> after = BountyOffers.current(player.server, now);
+        helper.assertTrue(after.stream().noneMatch(before::contains), "rerolled postings share nothing with the previous board");
+        helper.assertTrue(BountyOffers.current(player.server, now).equals(after), "the rerolled board is stable until the next change");
         helper.succeed();
     }
 
@@ -133,10 +140,10 @@ public class BountyGameTests {
         killZombie(helper, player, sources);
         BountyState completed = PlayerBounties.state(player);
         helper.assertTrue(completed.active().isEmpty() && completed.ticksUntilReady(helper.getLevel().getGameTime()) > 0, "the last kill completes the bounty and starts the claim cooldown");
-        helper.assertTrue(player.getInventory().countItem(Items.IRON_INGOT) == 15, "the iron reward is given, got " + player.getInventory().countItem(Items.IRON_INGOT));
-        helper.assertTrue(player.totalExperience == 150, "the experience reward is given, got " + player.totalExperience);
+        helper.assertTrue(player.getInventory().countItem(Items.IRON_INGOT) == 12, "the iron reward is given, got " + player.getInventory().countItem(Items.IRON_INGOT));
+        helper.assertTrue(player.totalExperience == 100, "the experience reward is given, got " + player.totalExperience);
         Progress progress = BestiaryProgress.of(player, ZOMBIE);
-        helper.assertTrue(progress.equals(new Progress(6, 1)), "two real kills plus four bonus kills and one bounty, got " + progress);
+        helper.assertTrue(progress.equals(new Progress(12, 1)), "two real kills plus ten bonus kills and one bounty, got " + progress);
         helper.succeed();
     }
 

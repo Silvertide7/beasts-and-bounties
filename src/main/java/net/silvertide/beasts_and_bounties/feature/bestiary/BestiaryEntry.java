@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 public final class BestiaryEntry {
-    public static final Codec<BestiaryEntry> CODEC = RecordCodecBuilder.<BestiaryEntry>create(instance -> instance.group(
+    public static final Codec<BestiaryEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Classification.CODEC.optionalFieldOf("classification", Classification.NORMAL).forGetter(BestiaryEntry::classification),
             Codec.list(Milestone.CODEC, 1, Integer.MAX_VALUE).fieldOf("milestones").forGetter(BestiaryEntry::milestones)
     ).apply(instance, BestiaryEntry::new));
@@ -51,7 +51,7 @@ public final class BestiaryEntry {
                     case Reward.BonusExperience experience -> bonusExperience += experience.amount();
                     case Reward.PassiveTracking tracking -> passiveTracking = Math.max(passiveTracking, tracking.level());
                     case Reward.ActiveTracking tracking -> activeTracking = Math.max(activeTracking, tracking.level());
-                    case Reward.AttributeBonus attribute -> {}
+                    case Reward.AttributeBonus ignored -> {}
                 }
             }
             knowledgeAtMilestone[i] = knowledge;

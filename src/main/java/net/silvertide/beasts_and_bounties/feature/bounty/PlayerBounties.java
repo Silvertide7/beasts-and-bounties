@@ -132,7 +132,7 @@ public final class PlayerBounties {
     }
 
     static void reroll(MinecraftServer server) {
-        BoardRerolls.of(server).increment();
+        BountyBoardData.of(server).reroll();
     }
 
     static void clear(ServerPlayer player) {

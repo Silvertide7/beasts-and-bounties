@@ -43,8 +43,18 @@ Five real defects were found and fixed the same day. Two findings were rejected 
 
 - [x] `mod_version` set to `1.0.0`; `authors="Silvertide7"` in the mods.toml template.
   `issueTrackerURL` and `displayURL` stay commented out.
-- [ ] Project Problems check: a whole-project search in the IDE's Problems tab, exported to
-  `claude_reference/problems` for review.
+- [x] Project Problems check (export in `claude_reference/problems`). Acted on: two
+  `Math.clamp` rewrites (command counters, `saturatingAdd`), `Long::sum` for the add command, an
+  inferable type argument on the entry codec, an unused pattern variable renamed `ignored`, and
+  four always-constant parameters folded into `drawFooter` / `drawCenteredScaled` / `isOverCard`
+  on the board screen. Left alone, with reasons: "method never used" on every `@SubscribeEvent`
+  handler, mixin and gametest (reflection-driven); every "`Level` used without try-with-resources"
+  (the IDE sees `AutoCloseable` on `Level`; nobody closes a level); the nonnull-annotation nags on
+  overrides (the project doesn't annotate); `Optional` parameters and fields (deliberate, they
+  model "not tracking"); the Gradle DSL and `${...}` TOML template "unresolved" errors (template
+  expansion); `PackFile` visibility (a private record in a protected signature); the `runAsFancy`
+  deprecation (vanilla's own inventory entity render still calls it); and the "may be null" data
+  flow warnings, each guarded earlier in the same path.
 
 ## Verified OK (reviewer's list, condensed)
 

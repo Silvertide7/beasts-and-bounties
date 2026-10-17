@@ -34,10 +34,6 @@
       ],
       "rewards": [
         {
-          "type": "damage_bonus",
-          "amount": 0.05
-        },
-        {
           "type": "extra_loot",
           "chance": 0.2
         },
@@ -46,8 +42,8 @@
           "amount": 0.1
         },
         {
-          "type": "passive_tracking",
-          "level": 1
+          "type": "damage_bonus",
+          "amount": 0.05
         }
       ]
     },
@@ -77,24 +73,12 @@
       ],
       "rewards": [
         {
+          "type": "passive_tracking",
+          "level": 1
+        },
+        {
           "type": "damage_resistance",
           "amount": 0.05
-        },
-        {
-          "type": "extra_loot",
-          "chance": 0.2
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.1
-        },
-        {
-          "type": "passive_tracking",
-          "level": 2
-        },
-        {
-          "type": "active_tracking",
-          "level": 1
         }
       ]
     },
@@ -110,30 +94,12 @@
       ],
       "rewards": [
         {
-          "type": "damage_bonus",
-          "amount": 0.05
-        },
-        {
-          "type": "damage_resistance",
-          "amount": 0.05
+          "type": "passive_tracking",
+          "level": 2
         },
         {
           "type": "extra_loot",
           "chance": 0.2
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.1
-        },
-        {
-          "type": "attribute",
-          "attribute": "minecraft:generic.movement_speed",
-          "amount": 0.02,
-          "operation": "add_multiplied_base"
-        },
-        {
-          "type": "passive_tracking",
-          "level": 3
         }
       ]
     },
@@ -141,9 +107,22 @@
       "kills": 4,
       "rewards": [
         {
+          "type": "active_tracking",
+          "level": 1
+        },
+        {
           "type": "damage_bonus",
           "amount": 0.05
         },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 5,
+      "rewards": [
         {
           "type": "damage_resistance",
           "amount": 0.05
@@ -151,19 +130,70 @@
         {
           "type": "extra_loot",
           "chance": 0.2
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.1
-        },
-        {
-          "type": "active_tracking",
-          "level": 2
         }
       ]
     },
     {
-      "kills": 5,
+      "kills": 6,
+      "rewards": [
+        {
+          "type": "active_tracking",
+          "level": 2
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 7,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.2
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.movement_speed",
+          "amount": 0.02,
+          "operation": "add_multiplied_base"
+        }
+      ]
+    },
+    {
+      "kills": 8,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.05
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 10,
+      "bounties": 1,
+      "rewards": [
+        {
+          "type": "passive_tracking",
+          "level": 3
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.2
+        }
+      ]
+    },
+    {
+      "kills": 12,
       "rewards": [
         {
           "type": "damage_bonus",
@@ -174,22 +204,24 @@
           "amount": 0.05
         },
         {
-          "type": "extra_loot",
-          "chance": 0.2
-        },
-        {
           "type": "bonus_experience",
           "amount": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 15,
+      "bounties": 2,
+      "rewards": [
+        {
+          "type": "active_tracking",
+          "level": 3
         },
         {
           "type": "attribute",
           "attribute": "minecraft:generic.movement_speed",
           "amount": 0.02,
           "operation": "add_multiplied_base"
-        },
-        {
-          "type": "active_tracking",
-          "level": 3
         }
       ]
     }

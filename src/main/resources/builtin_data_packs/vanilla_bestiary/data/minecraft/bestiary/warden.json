@@ -61,18 +61,6 @@
       ],
       "rewards": [
         {
-          "type": "damage_bonus",
-          "amount": 0.025
-        },
-        {
-          "type": "extra_loot",
-          "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
-        },
-        {
           "type": "passive_tracking",
           "level": 1
         }
@@ -93,20 +81,8 @@
       ],
       "rewards": [
         {
-          "type": "damage_resistance",
+          "type": "damage_bonus",
           "amount": 0.025
-        },
-        {
-          "type": "extra_loot",
-          "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
-        },
-        {
-          "type": "passive_tracking",
-          "level": 2
         }
       ]
     },
@@ -122,20 +98,12 @@
       ],
       "rewards": [
         {
-          "type": "damage_bonus",
+          "type": "damage_resistance",
           "amount": 0.025
         },
         {
           "type": "extra_loot",
           "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
-        },
-        {
-          "type": "active_tracking",
-          "level": 1
         }
       ]
     },
@@ -143,22 +111,12 @@
       "kills": 5,
       "rewards": [
         {
-          "type": "damage_resistance",
-          "amount": 0.025
-        },
-        {
-          "type": "extra_loot",
-          "chance": 0.1
+          "type": "passive_tracking",
+          "level": 2
         },
         {
           "type": "bonus_experience",
           "amount": 0.05
-        },
-        {
-          "type": "attribute",
-          "attribute": "minecraft:generic.knockback_resistance",
-          "amount": 0.05,
-          "operation": "add_value"
         }
       ]
     },
@@ -172,31 +130,6 @@
         {
           "type": "extra_loot",
           "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
-        },
-        {
-          "type": "passive_tracking",
-          "level": 3
-        }
-      ]
-    },
-    {
-      "kills": 7,
-      "rewards": [
-        {
-          "type": "damage_resistance",
-          "amount": 0.025
-        },
-        {
-          "type": "extra_loot",
-          "chance": 0.1
-        },
-        {
-          "type": "bonus_experience",
-          "amount": 0.05
         }
       ]
     },
@@ -204,20 +137,12 @@
       "kills": 8,
       "rewards": [
         {
-          "type": "damage_bonus",
-          "amount": 0.025
-        },
-        {
-          "type": "extra_loot",
-          "chance": 0.1
+          "type": "active_tracking",
+          "level": 1
         },
         {
           "type": "bonus_experience",
           "amount": 0.05
-        },
-        {
-          "type": "active_tracking",
-          "level": 2
         }
       ]
     },
@@ -235,16 +160,123 @@
         {
           "type": "bonus_experience",
           "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 12,
+      "rewards": [
+        {
+          "type": "active_tracking",
+          "level": 2
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 14,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.025
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
         },
         {
           "type": "attribute",
           "attribute": "minecraft:generic.knockback_resistance",
           "amount": 0.05,
           "operation": "add_value"
+        }
+      ]
+    },
+    {
+      "kills": 16,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.025
         },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        }
+      ]
+    },
+    {
+      "kills": 18,
+      "bounties": 1,
+      "rewards": [
+        {
+          "type": "passive_tracking",
+          "level": 3
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 20,
+      "rewards": [
+        {
+          "type": "damage_bonus",
+          "amount": 0.025
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 22,
+      "rewards": [
+        {
+          "type": "damage_resistance",
+          "amount": 0.025
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "extra_loot",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "kills": 25,
+      "bounties": 2,
+      "rewards": [
         {
           "type": "active_tracking",
           "level": 3
+        },
+        {
+          "type": "bonus_experience",
+          "amount": 0.05
+        },
+        {
+          "type": "attribute",
+          "attribute": "minecraft:generic.knockback_resistance",
+          "amount": 0.05,
+          "operation": "add_value"
         }
       ]
     }

@@ -1,7 +1,7 @@
 {
-  "kills": 5,
-  "weight": 10,
-  "bonus_kills": 4,
+  "kills": 3,
+  "weight": 7,
+  "bonus_kills": 10,
   "rewards": [
     {
       "type": "item",
@@ -10,7 +10,7 @@
     },
     {
       "type": "experience",
-      "amount": 150
+      "amount": 180
     }
   ]
 }

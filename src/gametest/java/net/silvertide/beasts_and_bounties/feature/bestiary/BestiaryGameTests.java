@@ -76,16 +76,17 @@ public class BestiaryGameTests {
         helper.assertTrue(skeleton.knowledge(kills(2)).name() && skeleton.knowledge(kills(2)).model(), "second kill should reveal name and model");
         helper.assertTrue(skeleton.knowledge(kills(4)).stats().isEmpty() && !skeleton.knowledge(kills(5)).stats().isEmpty(), "stats should arrive at five kills");
         helper.assertTrue(skeleton.knowledge(kills(4)).attackPatterns().isEmpty() && !skeleton.knowledge(kills(5)).attackPatterns().isEmpty(), "attack patterns should arrive with the stats");
-        helper.assertTrue(!skeleton.knowledge(kills(40)).notes().isEmpty() && skeleton.knowledge(kills(40)).name(), "all information is revealed by 40 kills");
-        assertClose(helper, skeleton.bonuses(kills(14)).damageMultiplier(), 1.0, "no damage bonus before 15 kills");
-        assertClose(helper, skeleton.bonuses(kills(15)).damageMultiplier(), 1.02, "small damage bonus at 15 kills");
-        assertClose(helper, skeleton.bonuses(kills(250)).damageMultiplier(), 1.10, "damage bonuses stack to +10%");
-        assertClose(helper, skeleton.bonuses(kills(250)).damageTakenMultiplier(), 0.90, "resistances stack to 10%");
+        helper.assertTrue(!skeleton.knowledge(kills(50)).notes().isEmpty() && skeleton.knowledge(kills(50)).name(), "all information is revealed by 50 kills");
+        assertClose(helper, skeleton.bonuses(kills(39)).damageMultiplier(), 1.0, "no damage bonus before 40 kills");
+        assertClose(helper, skeleton.bonuses(kills(40)).damageMultiplier(), 1.02, "small damage bonus at 40 kills");
+        Progress complete = new Progress(500, 2);
+        assertClose(helper, skeleton.bonuses(complete).damageMultiplier(), 1.10, "damage bonuses stack to +10%");
+        assertClose(helper, skeleton.bonuses(complete).damageTakenMultiplier(), 0.90, "resistances stack to 10%");
         assertClose(helper, skeleton.bonuses(kills(9)).extraLootChance(), 0, "no extra loot before 10 kills");
         assertClose(helper, skeleton.bonuses(kills(10)).extraLootChance(), 0.1, "10% extra loot at 10 kills");
-        assertClose(helper, skeleton.bonuses(kills(250)).extraLootChance(), 1.0, "extra loot reaches 100% when complete");
-        assertClose(helper, skeleton.bonuses(kills(250)).experienceMultiplier(), 1.5, "bonus experience stacks to +50%");
-        helper.assertTrue(skeleton.nextRequirement(kills(200)).isPresent() && skeleton.nextRequirement(kills(250)).isEmpty(), "250 kills should complete the skeleton");
+        assertClose(helper, skeleton.bonuses(complete).extraLootChance(), 1.0, "extra loot reaches 100% when complete");
+        assertClose(helper, skeleton.bonuses(complete).experienceMultiplier(), 1.5, "bonus experience stacks to +50%");
+        helper.assertTrue(skeleton.nextRequirement(kills(500)).isPresent() && skeleton.nextRequirement(complete).isEmpty(), "500 kills and two bounties complete the skeleton");
         helper.succeed();
     }
 
@@ -94,7 +95,7 @@ public class BestiaryGameTests {
     public static void bossAttributeBonusesFollowKillsAndCanBeRemoved(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
         double baseMaxHealth = player.getAttributeValue(Attributes.MAX_HEALTH);
-        BestiaryProgress.all(player).put(EntityType.getKey(EntityType.WITHER), kills(5));
+        BestiaryProgress.all(player).put(EntityType.getKey(EntityType.WITHER), new Progress(15, 2));
         BestiaryAttributes.reapply(player);
         assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 4, "wither grants +4 max health across its milestones");
 
@@ -218,12 +219,12 @@ public class BestiaryGameTests {
         ResourceLocation wither = EntityType.getKey(EntityType.WITHER);
         BestiaryEntry entry = BestiaryEntries.get(wither);
         double baseMaxHealth = player.getAttributeValue(Attributes.MAX_HEALTH);
-        BestiaryProgress.set(player, wither, entry, kills(3));
-        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 2, "half the wither boon at 3 kills");
-        BestiaryProgress.set(player, wither, entry, kills(4));
+        BestiaryProgress.set(player, wither, entry, kills(7));
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 2, "half the wither boon at 7 kills");
+        BestiaryProgress.set(player, wither, entry, kills(8));
         assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 2, "a milestone without an attribute changes nothing");
-        BestiaryProgress.set(player, wither, entry, kills(5));
-        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 4, "the full wither boon at 5 kills");
+        BestiaryProgress.set(player, wither, entry, new Progress(15, 2));
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 4, "the full wither boon at 15 kills and two bounties");
         BestiaryProgress.set(player, wither, entry, Progress.NONE);
         helper.assertFalse(BestiaryProgress.all(player).containsKey(wither), "setting NONE removes the key");
         assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth, "the boon leaves with the progress");
@@ -243,11 +244,11 @@ public class BestiaryGameTests {
         helper.assertTrue(BestiaryProgress.of(player, skeleton).bounties() == 2, "add raises the other counter");
         commands.performPrefixedCommand(source, "bestiary kills remove @s minecraft:skeleton 5");
         helper.assertTrue(BestiaryProgress.of(player, skeleton).kills() == 0 && BestiaryProgress.of(player, skeleton).bounties() == 2, "remove clamps at zero and keeps the other counter");
-        commands.performPrefixedCommand(source, "bestiary kills set @s minecraft:skeleton 300");
+        commands.performPrefixedCommand(source, "bestiary kills set @s minecraft:skeleton 600");
         commands.performPrefixedCommand(source, "bestiary complete @s minecraft:skeleton");
-        helper.assertTrue(BestiaryProgress.of(player, skeleton).kills() == 300, "complete never lowers progress");
+        helper.assertTrue(BestiaryProgress.of(player, skeleton).kills() == 600 && BestiaryProgress.of(player, skeleton).bounties() == 2, "complete never lowers progress and supplies the bounties");
         commands.performPrefixedCommand(source, "bestiary complete @s");
-        helper.assertTrue(BestiaryProgress.of(player, EntityType.COW).kills() == 250, "complete raises every entry to its final requirement");
+        helper.assertTrue(BestiaryProgress.of(player, EntityType.COW).equals(new Progress(500, 2)), "complete raises every entry to its final requirement");
         commands.performPrefixedCommand(source, "bestiary reset @s minecraft:skeleton");
         helper.assertFalse(BestiaryProgress.all(player).containsKey(skeleton), "reset for one entry removes its key");
         commands.performPrefixedCommand(source, "bestiary reset @s");
@@ -259,8 +260,8 @@ public class BestiaryGameTests {
     @SuppressWarnings("removal")
     public static void damageHooksScaleHitsLootAndExperience(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        BestiaryProgress.all(player).put(EntityType.getKey(EntityType.COW), kills(250));
-        BestiaryProgress.all(player).put(EntityType.getKey(EntityType.SKELETON), kills(250));
+        BestiaryProgress.all(player).put(EntityType.getKey(EntityType.COW), new Progress(500, 2));
+        BestiaryProgress.all(player).put(EntityType.getKey(EntityType.SKELETON), new Progress(500, 2));
         Cow cow = spawnStill(helper, EntityType.COW, player);
         Skeleton skeleton = spawnStill(helper, EntityType.SKELETON, player);
         DamageSources sources = helper.getLevel().damageSources();

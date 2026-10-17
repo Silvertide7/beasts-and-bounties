@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'net.neoforged.moddev' version '2.0.146'
     id 'idea'
+    id "me.modmuss50.mod-publish-plugin" version "0.8.3"
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -142,6 +143,42 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 sourceSets.main.resources.srcDir generateModMetadata
 // To avoid having to run "generateModMetadata" manually, make it run on every project reload
 neoForge.ideSyncTask generateModMetadata
+
+publishMods {
+    file = jar.archiveFile
+    modLoaders.add("neoforge")
+    changelog = new File("$project.rootDir/CHANGELOG.md").getText('UTF-8')
+    version = "${minecraft_version}-${mod_version}"
+    type = STABLE
+    displayName = "beasts-and-bounties-${minecraft_version}-${mod_version}"
+    dryRun = System.getenv("PUBLISH_DRY_RUN") == "true"
+
+    curseforge {
+        projectId = "${curseforge_project}"
+        projectSlug = "beasts-and-bounties"
+        accessToken = providers.environmentVariable("CF_TOKEN")
+
+        minecraftVersions.add(minecraft_version)
+        javaVersions.add(JavaVersion.VERSION_21)
+
+        clientRequired = true
+        serverRequired = true
+
+        requires("silverlib")
+        optional("project-mmo")
+    }
+
+    discord {
+        webhookUrl = providers.environmentVariable("DISCORD_WEBHOOK_URL")
+        dryRunWebhookUrl = providers.environmentVariable("DISCORD_WEBHOOK_TEST_URL")
+        username = "Beasts & Bounties"
+        style {
+            look = "MODERN"
+            color = "curseforge"
+            link = "EMBED"
+        }
+    }
+}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation

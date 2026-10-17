@@ -44,7 +44,7 @@ final class BestiaryCommand {
 
     private enum Change {
         SET("set", (current, amount) -> amount),
-        ADD("add", (current, amount) -> current + amount),
+        ADD("add", Long::sum),
         REMOVE("remove", (current, amount) -> current - amount);
 
         private final String name;
@@ -102,7 +102,7 @@ final class BestiaryCommand {
         for (ServerPlayer player : targets) {
             Progress progress = BestiaryProgress.of(player, entityId);
             long changed = change.apply.applyAsLong(counter.read.applyAsInt(progress), amount);
-            int clamped = (int) Math.max(0, Math.min(Integer.MAX_VALUE, changed));
+            int clamped = Math.clamp(changed, 0, Integer.MAX_VALUE);
             BestiaryProgress.set(player, entityId, entry, counter.write.apply(progress, clamped));
         }
         context.getSource().sendSuccess(() -> Component.translatable("commands.beasts_and_bounties.changed",

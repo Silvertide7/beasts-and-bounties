@@ -1,7 +1,7 @@
 {
-  "kills": 3,
-  "weight": 4,
-  "bonus_kills": 2,
+  "kills": 4,
+  "weight": 5,
+  "bonus_kills": 5,
   "rewards": [
     {
       "type": "item",

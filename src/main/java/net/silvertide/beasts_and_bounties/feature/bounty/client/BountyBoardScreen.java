@@ -234,9 +234,9 @@ final class BountyBoardScreen extends Screen {
         Component footer = active.isPresent() ? Component.translatable("gui.beasts_and_bounties.board.active_hint")
                 : state.canAccept(now) ? Component.translatable("gui.beasts_and_bounties.board.refresh", duration(Math.max(0, board.periodEndsAt() - now)))
                 : Component.translatable("gui.beasts_and_bounties.board.cooldown", duration(state.ticksUntilReady(now)));
-        drawCentered(graphics, footer, left + CONTENT_X + CONTENT_WIDTH / 2, top + FOOTER_Y, FOOTER_COLOR, true);
+        drawFooter(graphics, footer, left + CONTENT_X + CONTENT_WIDTH / 2, top + FOOTER_Y);
         for (Poster poster : posters) {
-            if (isOver(mouseX, mouseY, poster.x(), cardTop(), CARD_WIDTH, CARD_HEIGHT) && !isOverButton(mouseX, mouseY, poster))
+            if (isOverCard(mouseX, mouseY, poster) && !isOverButton(mouseX, mouseY, poster))
                 Tooltips.render(graphics, font, poster.tooltip(), mouseX, mouseY);
         }
     }
@@ -248,7 +248,7 @@ final class BountyBoardScreen extends Screen {
     private void renderPoster(GuiGraphics graphics, Poster poster, Component task, @Nullable BountyPayloads.Offer rewards, int mouseX, int mouseY) {
         int x = poster.x();
         int y = cardTop();
-        boolean hovered = isOver(mouseX, mouseY, x, y, CARD_WIDTH, CARD_HEIGHT);
+        boolean hovered = isOverCard(mouseX, mouseY, poster);
         graphics.pose().pushPose();
         if (hovered) {
             graphics.pose().translate(poster.centerX(), y + CARD_HEIGHT / 2f, 0);
@@ -268,7 +268,7 @@ final class BountyBoardScreen extends Screen {
         renderModel(graphics, poster, y + MODEL_BOX_TOP);
         float nameY = y + NAME_Y + (GLYPH_HEIGHT * bodyScale - GLYPH_HEIGHT * poster.nameScale()) / 2;
         drawScaledAt(graphics, poster.nameLine(), poster.centerX() - font.width(poster.nameLine()) * poster.nameScale() / 2, nameY, poster.nameScale(), TEXT_COLOR);
-        drawCenteredScaled(graphics, task, poster.centerX(), y + TASK_Y, slayScale, TEXT_COLOR);
+        drawCenteredScaled(graphics, task, poster.centerX(), y + TASK_Y, slayScale);
         if (rewards != null) renderRewards(graphics, poster, rewards, y + TASK_Y + GLYPH_HEIGHT * slayScale + LINE_GAP);
         PosterButton button = posterButton();
         if (hovered && button != null) {
@@ -390,16 +390,16 @@ final class BountyBoardScreen extends Screen {
         graphics.disableScissor();
     }
 
-    private void drawCenteredScaled(GuiGraphics graphics, Component text, int centerX, int y, float scale, int color) {
+    private void drawCenteredScaled(GuiGraphics graphics, Component text, int centerX, int y, float scale) {
         graphics.pose().pushPose();
         graphics.pose().translate(centerX, y, 0);
         graphics.pose().scale(scale, scale, 1f);
-        graphics.drawString(font, text, -font.width(text) / 2, 0, color, false);
+        graphics.drawString(font, text, -font.width(text) / 2, 0, TEXT_COLOR, false);
         graphics.pose().popPose();
     }
 
-    private void drawCentered(GuiGraphics graphics, Component text, int centerX, int y, int color, boolean shadow) {
-        graphics.drawString(font, text, centerX - font.width(text) / 2, y, color, shadow);
+    private void drawFooter(GuiGraphics graphics, Component text, int centerX, int y) {
+        graphics.drawString(font, text, centerX - font.width(text) / 2, y, FOOTER_COLOR, true);
     }
 
     @Override
@@ -444,7 +444,7 @@ final class BountyBoardScreen extends Screen {
                 && mouseY >= hoveredCenterY - height / 2 && mouseY < hoveredCenterY + height / 2;
     }
 
-    private static boolean isOver(double mouseX, double mouseY, int x, int y, int width, int height) {
-        return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
+    private boolean isOverCard(double mouseX, double mouseY, Poster poster) {
+        return mouseX >= poster.x() && mouseX < poster.x() + CARD_WIDTH && mouseY >= cardTop() && mouseY < cardTop() + CARD_HEIGHT;
     }
 }

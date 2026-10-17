@@ -38,3 +38,6 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+
+# IDE Problems-tab exports for audits
+claude_reference/problems/
