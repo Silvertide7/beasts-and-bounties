@@ -694,10 +694,14 @@ board is only where you look. One bounty is active at a time.
   model (28 px box at 20, scissored to that box in screen space, transformed by the hover scale,
   so tall mobs never reach the heading), then the name (bold, upper case, one line, body-text scale)
   and "Slay N" (0.9 × body scale). Below that, laid out line by line from "Slay N" down, the
-  rewards: "Rewards" (black, full-size text, centred: the section heading), then in detail text
-  (0.9 × `GuiText.pixelSnappedSmallScale`) "N XP" (centred), then 3 px lower the item rewards as 8 px
-  icons (`renderItem` + `renderItemDecorations`, so the count sits on the icon like a stack),
-  centred, up to 9 a row and wrapping to further rows below. N is experience **points** (`giveExperiencePoints`), not levels, because a
+  rewards: the hand-painted `reward_text` heading (58×16, drawn 44×12, centred), then one centred
+  line in detail text (0.9 × `GuiText.pixelSnappedSmallScale`): "N XP" first (there is only ever
+  one experience total, drawn at the unshrunk small scale), a 3 px gap, then the item rewards as
+  8 px icons (`renderItem` + `renderItemDecorations`, so the count sits on the icon like a stack).
+  The group is centred as a whole, not spread out. When the icons would overrun the paper
+  (`itemsThatFit`, computed once per poster), the line shows as many as fit followed by "+N", and
+  the poster's hover tooltip lists every reward ("Rewards:", the XP, then "3× Emerald" lines)
+  above the "Last seen:" habitat. N is experience **points** (`giveExperiencePoints`), not levels, because a
   level's cost depends on the player's current level. A line with nothing to show is left out. The bottom of the paper is left for the hover-only button. Hovering a poster swaps in `bounty_card_highlighted`, scales it
   up 10% about its centre and pushes its drop shadow from 2 px to 4 px (the shadow is the paper's own silhouette, drawn black and offset down-right, so the ragged edge casts a matching shadow) and only
   then shows its Accept action: the hand-painted `accept_text` sprite (88×16, swapped for `accept_text_highlighted` under the mouse), drawn at 3/4 size (66×12) and centred; the drawn sprite is the click area. The active poster uses `abandon_text` (92×16, drawn 69×12) the same way.
@@ -710,8 +714,11 @@ board is only where you look. One bounty is active at a time.
   `renderEntityInInventory` with that buffer source. With a bounty active the postings are replaced
   by one poster for the target with "2 of 5 slain", its reward line and an Abandon button (with a bounty active the server sends that bounty's own definition as the only offer, since it is usually not in the current period's postings), footer "Finish this hunt
   before taking another." On cooldown (after completing or abandoning) the board is **empty** and
-  the footer says how long; otherwise "New postings in N min". Accept/Abandon send their payload
-  and close.
+  the footer reads "More bounties should arrive in 20 minutes."; otherwise "New postings in 14
+  minutes." Durations use whole words with singular keys ("1 minute", "45 seconds"). Accept/Abandon send their payload and **the board stays open**: the server
+  answers a successful accept or abandon with a fresh `BoardOpened`, and the client's handler
+  updates an already-open `BountyBoardScreen` in place (`show`, which re-runs `init`) instead of
+  opening a new one. A refused accept (cooldown, not offered) only shows its action-bar message.
 - **Tooltips** (`bestiary/client/Tooltips`): the one tooltip renderer (mod `tooltip` nine-slice,
   multi-line, kept on screen), used by the book's tab names and the board's habitat.
 - **Book**: list order is bounty creature first (warm tint, `bounty_mark`: a 9×9 black crosshair),

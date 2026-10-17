@@ -79,12 +79,14 @@ public final class PlayerBounties {
         int kills = offer.get().definition().kills();
         store(player, state.accepted(entityId, kills));
         player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.accepted" + (kills == 1 ? ".one" : ""), creatureName(player, entityId), kills), true);
+        openBoard(player);
     }
 
     static void abandon(ServerPlayer player) {
         if (!BountyConfig.ALLOW_ABANDON.get() || state(player).active().isEmpty()) return;
         store(player, state(player).ended(player.level().getGameTime(), BountyConfig.abandonCooldownTicks()));
         player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.abandoned"), true);
+        openBoard(player);
     }
 
     static void recordKill(ServerPlayer player, ResourceLocation entityId) {

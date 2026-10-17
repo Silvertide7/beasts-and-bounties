@@ -1,5 +1,7 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -77,6 +79,28 @@ public class BountyGameTests {
         helper.assertTrue(abandoned.active().isEmpty() && abandoned.ticksUntilReady(now) > 0, "abandoning clears the bounty and starts a cooldown");
         PlayerBounties.accept(player, offered);
         helper.assertTrue(PlayerBounties.state(player).active().isEmpty(), "nothing can be accepted during the cooldown");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void boardCommandsRerollAndClear(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        long now = helper.getLevel().getGameTime();
+        List<BountyOffers.Offer> before = BountyOffers.forPlayer(player, now);
+        PlayerBounties.accept(player, before.getFirst().entityId());
+        PlayerBounties.abandon(player);
+        helper.assertTrue(!PlayerBounties.state(player).canAccept(now), "abandoning leaves a cooldown");
+
+        CommandSourceStack source = player.createCommandSourceStack().withPermission(Commands.LEVEL_GAMEMASTERS);
+        Commands commands = helper.getLevel().getServer().getCommands();
+        commands.performPrefixedCommand(source, "bestiary board clear @s");
+        helper.assertTrue(PlayerBounties.state(player).canAccept(now), "board clear drops the cooldown");
+        helper.assertTrue(PlayerBounties.state(player).equals(BountyState.NONE), "a cleared, unrerolled player stores nothing");
+
+        commands.performPrefixedCommand(source, "bestiary board reroll @s");
+        helper.assertTrue(PlayerBounties.state(player).rerolls() == 1, "reroll salts the offers");
+        helper.assertTrue(!BountyOffers.forPlayer(player, now).equals(before), "rerolled postings differ");
         helper.succeed();
     }
 

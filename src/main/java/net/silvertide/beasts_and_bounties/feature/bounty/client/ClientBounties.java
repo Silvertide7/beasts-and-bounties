@@ -23,7 +23,8 @@ public final class ClientBounties {
 
     public static void openBoard(BountyPayloads.BoardOpened board) {
         state = board.state();
-        Minecraft.getInstance().setScreen(new BountyBoardScreen(board));
+        if (Minecraft.getInstance().screen instanceof BountyBoardScreen open) open.show(board);
+        else Minecraft.getInstance().setScreen(new BountyBoardScreen(board));
     }
 
     public static void claimed(ResourceLocation entityId) {
