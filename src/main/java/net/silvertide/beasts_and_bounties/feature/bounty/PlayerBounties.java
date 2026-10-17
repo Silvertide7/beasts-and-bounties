@@ -47,6 +47,10 @@ public final class PlayerBounties {
     }
 
     static void openBoard(ServerPlayer player) {
+        sendBoard(player, false);
+    }
+
+    private static void sendBoard(ServerPlayer player, boolean refreshOnly) {
         long now = player.level().getGameTime();
         BountyState state = state(player);
         List<BountyOffers.Offer> shown = state.active()
@@ -57,7 +61,7 @@ public final class PlayerBounties {
                 .map(offer -> new BountyPayloads.Offer(offer.entityId(), offer.definition().kills(), offer.definition().itemRewards(),
                         offer.definition().experienceReward(), skillExperienceLines(offer.definition()), lastSeen(offer.entityId())))
                 .toList();
-        Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state));
+        Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state, refreshOnly));
     }
 
     private static List<Component> skillExperienceLines(BountyDefinition definition) {
@@ -88,14 +92,14 @@ public final class PlayerBounties {
         int kills = offer.get().definition().kills();
         store(player, state.accepted(entityId, kills));
         player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.accepted" + (kills == 1 ? ".one" : ""), creatureName(entityId), kills), true);
-        openBoard(player);
+        sendBoard(player, true);
     }
 
     static void abandon(ServerPlayer player) {
         if (!BountyConfig.ALLOW_ABANDON.get() || state(player).active().isEmpty()) return;
         store(player, state(player).ended(player.level().getGameTime(), BountyConfig.abandonCooldownTicks()));
         player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.abandoned"), true);
-        openBoard(player);
+        sendBoard(player, true);
     }
 
     static void recordKill(ServerPlayer player, ResourceLocation entityId) {

@@ -184,7 +184,7 @@ src/main/java/net/silvertide/beasts_and_bounties/
     PlayerBounties              player attachment; openBoard / accept / abandon / recordKill / complete
     BountyEvents                reload listener, join sync, death → recordKill for every participant
     BountyPayloads              BoardOpened, StateSync, BountyClaimed; AcceptBounty, AbandonBounty
-    BountyBoardBlock            wall-mounted board; right-click opens the board for that player
+    BountyBoardBlock            free-standing sign on a post; right-click on the board opens it for that player
     client/ClientBounties, client/BountyBoardScreen
     client/
       ClientBestiary            client copy of entries + kills; shows a toast on milestone deltas
@@ -332,7 +332,10 @@ There are two kinds of bonus, and they work differently on purpose.
 
 There is no attachment sync on NeoForge 21.1, so it is done by hand:
 
-- **Entries**: `OnDatapackSyncEvent` covers both join and `/reload`. The payload carries the
+- **Entries**: `OnDatapackSyncEvent` covers both join and `/reload`. The entries go out in
+  **chunks of 8** (`Entries.chunked`; the first chunk carries `first = true` and the client
+  replaces its map, later chunks merge in), because a custom payload is capped at 1 MiB and one
+  big map of a large pack would kick every client at login. Each payload carries the
   authored milestones via `ByteBufCodecs.fromCodecWithRegistries`. `Component` needs registries.
   NBT maps lose order, which is why stats are shown sorted. The client rebuilds the precomputed
   arrays with the same code.
@@ -366,7 +369,7 @@ There is no attachment sync on NeoForge 21.1, so it is done by hand:
   - **Knowledge**: the stats at the top, then Attack Patterns, Strengths, Weaknesses, Habitat and
     Notes sections. There is no separate Stats tab.
   - **Tracking & Bounties** (shown once the creature has tracking unlocked, bounties claimed, an
-    active bounty, or an entry that requires bounties): the Track / Stop Tracking button at the top
+    active bounty, or an entry that requires bounties: `BestiaryEntry.usesBounties`): the Track / Stop Tracking button at the top
     (only with tracking unlocked), then "Bounty: 2 of 5 slain" when this creature is the active
     bounty, then whether it's tracked and the passive/active level descriptions. Overview shows
     "Slain: N" and "Bounties completed: N" (the two numbers `Progress` stores per creature).
@@ -544,7 +547,10 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
     stops tracking.
   - `HuntUpdate` is only sent when the target, the glow set (ids sorted) or the target's position
     (moved over 4 blocks) changes; the transient `last_hunt_update` attachment remembers the last
-    one. The client follows the live entity for the arrow when it has it loaded.
+    one and is carried over on death by a `PlayerEvent.Clone` handler (a transient attachment
+    can't use `copyOnDeath`, which needs a serializer), since the hunt itself
+    survives death and the client would otherwise keep a stale target. The client follows the
+    live entity for the arrow when it has it loaded.
   - Pressing the hunt key during a hunt does nothing, on both sides.
 - **Sync**: `StateSync` on join (`OnDatapackSyncEvent`) and on every change, through
   `Payloads.sendIfConnected`. `ClientTracking.clear()` runs on logout so no stale glow carries
@@ -659,7 +665,7 @@ There is no datagen and no `data` run config.
   computed in `init()` via `GuiText.pixelSnappedBodyScale()`, shared with the bounty board.
 - `GuiGraphics.blitSprite` / `blit` **do not enable blending**; vanilla widgets call
   `RenderSystem.enableBlend()` themselves. Any sprite with soft or faint edges (the bounty cards,
-  the accept/abandon text, the tooltip) must be drawn between `enableBlend()` + `defaultBlendFunc()`
+  the accept/abandon text, the tooltip, the hunt compass and its markers) must be drawn between `enableBlend()` + `defaultBlendFunc()`
   and `disableBlend()`, or its near-transparent edge pixels draw at full strength as stray colours.
 - Text on the parchment is drawn **without a drop shadow** (`drawString(..., false)`). Vanilla widgets
   default to a shadow, which smears dark text; `EditBox` needs `setTextShadow(false)`.
@@ -729,10 +735,7 @@ is only where you look. One bounty is active at a time.
   `curse.maven:pmmo-353935:8800342` = PMMO 2.10.47, `type="optional"` in the mods.toml, not on
   the dev runtime). A `pmmo_xp` reward (`"xp": "skill/amount"`) is given on completion through `Core.get(level).getData().addXp(uuid,
   skill, amount)` only when PMMO is loaded (`ModList.isLoaded`, read once into a static final on first use); without PMMO the reward parses and is
-  silently skipped. `PmmoBridge.awardCraftExperienceFor(player, stack)` posts a NeoForge `ItemCraftedEvent` with an
-  empty crafting grid, which PMMO's `CraftHandler` turns into that item's configured craft XP
-  (the same trick as the farmers/vinery compats); it is kept for a future reward and has no
-  caller yet, by the user's choice. `PmmoBridge` is the only class that imports `harmonised.*`, and it is reached
+  silently skipped. `PmmoBridge` is the only class that imports `harmonised.*`, and it is reached
   only behind `PmmoBridge.isLoaded()` so the class never loads without the mod. With PMMO
   present the server sends each skill reward as a ready-made "1000 Fishing" line (the skill name
   via PMMO's own `pmmo.<skill>` lang key). The poster draws them on the experience line after "+60 XP". The shipped pack grants none; it is for
@@ -774,9 +777,10 @@ is only where you look. One bounty is active at a time.
   before taking another." On cooldown (after completing or abandoning) the board is **empty** and
   the footer reads "More bounties should arrive in 20 minutes."; otherwise "New postings in 14
   minutes." Durations use whole words with singular keys ("1 minute", "45 seconds"). Accept/Abandon send their payload and **the board stays open**: the server
-  answers a successful accept or abandon with a fresh `BoardOpened`, and the client's handler
-  updates an already-open `BountyBoardScreen` in place (`show`, which re-runs `init`) instead of
-  opening a new one. A refused accept (cooldown, not offered) only shows its action-bar message.
+  answers a successful accept or abandon with a fresh `BoardOpened` flagged `refreshOnly`, and the
+  client's handler updates an already-open `BountyBoardScreen` in place (`show`, which re-runs
+  `init`); a refresh that arrives after the player closed the board is dropped rather than
+  reopening it. A refused accept (cooldown, not offered) only shows its action-bar message.
 - **Tooltips** (`bestiary/client/Tooltips`): the one tooltip renderer (mod `tooltip` nine-slice,
   multi-line, kept on screen), used by the book's tab names and the board's habitat.
 - **Book**: list order is bounty creature first (warm tint, `bounty_mark`: a 9×9 black crosshair),

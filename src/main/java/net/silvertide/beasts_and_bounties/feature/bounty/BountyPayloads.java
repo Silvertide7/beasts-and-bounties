@@ -40,12 +40,13 @@ public final class BountyPayloads {
                 Offer::new);
     }
 
-    public record BoardOpened(List<Offer> offers, long periodEndsAt, BountyState state) implements CustomPacketPayload {
+    public record BoardOpened(List<Offer> offers, long periodEndsAt, BountyState state, boolean refreshOnly) implements CustomPacketPayload {
         static final Type<BoardOpened> TYPE = new Type<>(BeastsAndBountiesMod.id("board_opened"));
         static final StreamCodec<RegistryFriendlyByteBuf, BoardOpened> STREAM_CODEC = StreamCodec.composite(
                 Offer.STREAM_CODEC.apply(ByteBufCodecs.list()), BoardOpened::offers,
                 ByteBufCodecs.VAR_LONG, BoardOpened::periodEndsAt,
                 BountyState.STREAM_CODEC, BoardOpened::state,
+                ByteBufCodecs.BOOL, BoardOpened::refreshOnly,
                 BoardOpened::new);
 
         @Override

@@ -26,6 +26,7 @@ import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 import net.silvertide.beasts_and_bounties.core.Payloads;
 import net.silvertide.silverlib.feature.combat.CombatTracking;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -42,9 +43,10 @@ public final class BestiaryEvents {
 
     @SubscribeEvent
     static void syncEntriesAndProgress(OnDatapackSyncEvent event) {
-        BestiaryPayloads.Entries entries = new BestiaryPayloads.Entries(BestiaryEntries.all());
+        List<BestiaryPayloads.Entries> entries = BestiaryPayloads.Entries.chunked(BestiaryEntries.all());
         event.getRelevantPlayers().forEach(player -> {
-            Payloads.sendIfConnected(player, entries, new BestiaryPayloads.AllProgress(Map.copyOf(BestiaryProgress.all(player))));
+            entries.forEach(chunk -> Payloads.sendIfConnected(player, chunk));
+            Payloads.sendIfConnected(player, new BestiaryPayloads.AllProgress(Map.copyOf(BestiaryProgress.all(player))));
             BestiaryAttributes.reapply(player);
         });
     }

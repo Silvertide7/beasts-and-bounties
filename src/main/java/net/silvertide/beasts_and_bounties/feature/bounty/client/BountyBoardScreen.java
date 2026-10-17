@@ -320,7 +320,7 @@ final class BountyBoardScreen extends Screen {
             float moreWidth = lastRow && hidden > 0 ? ITEM_GAP + font.width(moreText(hidden)) * detailScale : 0;
             float x = poster.centerX() - (itemsWidth(row.size()) + moreWidth) / 2;
             renderItemRow(graphics, x, row, y);
-            if (lastRow && hidden > 0) drawSmall(graphics, moreText(hidden), x + itemsWidth(row.size()) + ITEM_GAP, y + (ITEM_ICON_DRAWN_SIZE - GLYPH_HEIGHT * detailScale) / 2);
+            if (lastRow && hidden > 0) drawScaledAt(graphics, moreText(hidden), x + itemsWidth(row.size()) + ITEM_GAP, y + (ITEM_ICON_DRAWN_SIZE - GLYPH_HEIGHT * detailScale) / 2, detailScale);
             y += ITEM_ICON_DRAWN_SIZE + ITEM_GAP;
         }
     }
@@ -338,9 +338,6 @@ final class BountyBoardScreen extends Screen {
         }
     }
 
-    private void drawSmall(GuiGraphics graphics, Component text, float x, float y) {
-        drawScaledAt(graphics, text, x, y, detailScale);
-    }
 
     private void drawScaledAt(GuiGraphics graphics, Component text, float x, float y, float scale) {
         drawScaledAt(graphics, text.getVisualOrderText(), x, y, scale, REWARD_TEXT_COLOR);

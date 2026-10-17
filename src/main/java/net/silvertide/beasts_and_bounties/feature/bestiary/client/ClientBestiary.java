@@ -16,8 +16,10 @@ public final class ClientBestiary {
 
     private ClientBestiary() {}
 
-    public static void setEntries(Map<ResourceLocation, BestiaryEntry> newEntries) {
-        entries = Map.copyOf(newEntries);
+    public static void receiveEntries(Map<ResourceLocation, BestiaryEntry> chunk, boolean first) {
+        Map<ResourceLocation, BestiaryEntry> merged = first ? new HashMap<>() : new HashMap<>(entries);
+        merged.putAll(chunk);
+        entries = Map.copyOf(merged);
         BestiaryScreen.refreshIfOpen();
     }
 

@@ -118,6 +118,8 @@ final class TrackingHud {
                     - player.getViewYRot(partialTick));
             int centerX = graphics.guiWidth() / 2;
             int centerY = compassCenterY(graphics);
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
             graphics.blitSprite(RING_SPRITE, centerX - RING_SIZE / 2, centerY - RING_SIZE / 2, RING_SIZE, RING_SIZE);
 
             float bearing = relativeYaw * Mth.DEG_TO_RAD;
@@ -134,6 +136,7 @@ final class TrackingHud {
                     arrowX - HEIGHT_MARKER_WIDTH / 2,
                     height == TrackingHeight.ABOVE ? arrowY - ARROW_SIZE / 2 - HEIGHT_MARKER_GAP - HEIGHT_MARKER_HEIGHT : arrowY + ARROW_SIZE / 2 + HEIGHT_MARKER_GAP,
                     HEIGHT_MARKER_WIDTH, HEIGHT_MARKER_HEIGHT));
+            RenderSystem.disableBlend();
         });
     }
 

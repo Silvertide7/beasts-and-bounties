@@ -12,6 +12,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 import net.silvertide.beasts_and_bounties.core.Payloads;
@@ -29,6 +30,12 @@ public final class TrackingScanner {
     @SubscribeEvent
     static void syncOnJoin(OnDatapackSyncEvent event) {
         if (event.getPlayer() != null) PlayerTracking.sync(event.getPlayer());
+    }
+
+    @SubscribeEvent
+    static void keepLastHuntUpdateAcrossDeath(PlayerEvent.Clone event) {
+        TrackingPayloads.HuntUpdate last = event.getOriginal().getExistingDataOrNull(PlayerTracking.LAST_HUNT_UPDATE);
+        if (last != null) event.getEntity().setData(PlayerTracking.LAST_HUNT_UPDATE, last);
     }
 
     @SubscribeEvent

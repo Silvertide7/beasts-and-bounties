@@ -265,6 +265,7 @@ public final class BestiaryScreen extends Screen {
     private void rebuildPage() {
         visibleTabs.clear();
         pageLines.clear();
+        trackButtonShown = false;
         if (selectedRow == null) return;
 
         Knowledge knowledge = selectedRow.entry().knowledge(selectedRow.progress());
@@ -273,7 +274,7 @@ public final class BestiaryScreen extends Screen {
         List<Tab> tabs = new ArrayList<>(List.of(Tab.OVERVIEW));
         if (knowledge.hasDetails()) tabs.add(Tab.KNOWLEDGE);
         if (!rewards.isEmpty()) tabs.add(Tab.REWARDS);
-        if (bonuses.hasTracking() || isSelectedBountied()) tabs.add(Tab.TRACKING);
+        if (bonuses.hasTracking() || isSelectedBountied() || selectedRow.progress().bounties() > 0 || selectedRow.entry().usesBounties()) tabs.add(Tab.TRACKING);
         for (int i = 0; i < tabs.size(); i++) visibleTabs.add(new TabSlot(tabs.get(i), TabShape.at(i, tabs.size())));
         if (!tabs.contains(selectedTab)) selectedTab = Tab.OVERVIEW;
         rebuildHeader();

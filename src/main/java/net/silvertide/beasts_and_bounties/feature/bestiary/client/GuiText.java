@@ -3,7 +3,7 @@ package net.silvertide.beasts_and_bounties.feature.bestiary.client;
 import net.minecraft.client.Minecraft;
 
 public final class GuiText {
-    public static final float BODY_TARGET_SCALE = 0.75f;
+    private static final float BODY_TARGET_SCALE = 0.75f;
     private static final float SMALL_TARGET_SCALE = 0.5f;
 
     private GuiText() {}

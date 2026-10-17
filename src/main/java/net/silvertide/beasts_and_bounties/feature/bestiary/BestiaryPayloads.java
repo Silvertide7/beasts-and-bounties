@@ -12,6 +12,8 @@ import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.ClientBestiary;
 
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public final class BestiaryPayloads {
@@ -19,15 +21,32 @@ public final class BestiaryPayloads {
 
     static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToClient(Entries.TYPE, Entries.STREAM_CODEC, (payload, context) -> ClientBestiary.setEntries(payload.entries()));
+        registrar.playToClient(Entries.TYPE, Entries.STREAM_CODEC, (payload, context) -> ClientBestiary.receiveEntries(payload.entries(), payload.first()));
         registrar.playToClient(AllProgress.TYPE, AllProgress.STREAM_CODEC, (payload, context) -> ClientBestiary.setProgress(payload.progress()));
         registrar.playToClient(ProgressUpdate.TYPE, ProgressUpdate.STREAM_CODEC, (payload, context) -> ClientBestiary.updateProgress(payload.entityId(), payload.progress()));
     }
 
-    public record Entries(Map<ResourceLocation, BestiaryEntry> entries) implements CustomPacketPayload {
+    public record Entries(Map<ResourceLocation, BestiaryEntry> entries, boolean first) implements CustomPacketPayload {
         static final Type<Entries> TYPE = new Type<>(BeastsAndBountiesMod.id("entries"));
-        static final StreamCodec<RegistryFriendlyByteBuf, Entries> STREAM_CODEC =
-                ByteBufCodecs.fromCodecWithRegistries(Codec.unboundedMap(ResourceLocation.CODEC, BestiaryEntry.CODEC)).map(Entries::new, Entries::entries);
+        static final StreamCodec<RegistryFriendlyByteBuf, Entries> STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.fromCodecWithRegistries(Codec.unboundedMap(ResourceLocation.CODEC, BestiaryEntry.CODEC)), Entries::entries,
+                ByteBufCodecs.BOOL, Entries::first,
+                Entries::new);
+        public static final int ENTRIES_PER_PAYLOAD = 8;
+
+        public static List<Entries> chunked(Map<ResourceLocation, BestiaryEntry> all) {
+            List<Entries> chunks = new ArrayList<>();
+            Map<ResourceLocation, BestiaryEntry> chunk = new HashMap<>();
+            for (Map.Entry<ResourceLocation, BestiaryEntry> entry : all.entrySet()) {
+                chunk.put(entry.getKey(), entry.getValue());
+                if (chunk.size() == ENTRIES_PER_PAYLOAD) {
+                    chunks.add(new Entries(Map.copyOf(chunk), chunks.isEmpty()));
+                    chunk.clear();
+                }
+            }
+            if (!chunk.isEmpty() || chunks.isEmpty()) chunks.add(new Entries(Map.copyOf(chunk), chunks.isEmpty()));
+            return chunks;
+        }
 
         @Override
         public Type<Entries> type() {

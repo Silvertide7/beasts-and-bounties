@@ -16,7 +16,7 @@ The mod has three parts that feed each other: the **Bestiary**, the **Bounty Boa
 
 ## The Bestiary
 
-Craft the Hunter's Bestiary from a book and a bone. You do not need to carry it for kills to count. The book is just where you read what you have learned.
+Craft the Hunter's Bestiary from leather, a book, and a bone stacked in a column. You do not need to carry it for kills to count. The book is just where you read what you have learned.
 
 A creature appears in the book after your first kill, listed as ??? with its model hidden. As you reach milestones, the entry fills in:
 
@@ -61,6 +61,10 @@ Milestones grant permanent bonuses. The Rewards tab splits them into two section
 
 Everyone who took part in a fight gets credit for the kill, including the owner of a pet or summon and anyone who healed the group. A party hunt moves everyone's book forward, not just whoever landed the last hit. This is what SilverLib is for.
 
+### Advancements
+
+Three advancements mark the big moments: "A Hunter's First Page" when you record your first creature, "Nothing Left to Learn" when you finish an entry, and "Master of Beasts" when every entry is complete. They are trophies only. Nothing is gated behind them.
+
 ### What's included
 
 The built-in datapack covers 54 vanilla creatures: every hostile mob, the bosses, and the livestock and fish players normally kill. Pets, villagers, golems, and peaceful creatures like axolotls and turtles are left out on purpose, since rewarding their deaths would encourage it.
@@ -71,13 +75,13 @@ Creatures are classed as normal, Elite, Minor Boss, or Major Boss. The tougher t
 
 ## Bounties
 
-The Bounty Board is a standing sign that posts hunts. Craft it from an oak sign and paper and place it anywhere. Everything on it is per player: two players at the same board see their own postings and hold their own bounties.
+The Bounty Board is a standing sign that posts hunts. Craft it from three paper across the top, any sign in the middle, and a stick below, then place it anywhere. The postings are shared by the whole server, so friends can take the same bounty and hunt it together. Progress, the active bounty, and cooldowns are per player.
 
 <insert picture of the bounty board with three WANTED posters here>
 
 ### Taking a bounty
 
-Each posting is a WANTED poster showing the creature, "Slay 5", and the rewards in items and XP. Click Accept and it becomes your active bounty. You can hold one bounty at a time, and the board shows that one poster with "2 of 5 slain" until you finish it.
+Each posting is a WANTED poster showing the creature's model and name, "Slay 5", and the rewards: "+150 XP" and the items as icons. The poster always names the creature, even if your book still shows it as ???. Click Accept and it becomes your active bounty. You can hold one bounty at a time, and the board shows that one poster with "2 of 5 slain" until you finish it.
 
 Every kill of the target updates the action bar: "Bounty: 2 of 5 slain." Completing the bounty gives you the rewards, plays a short sound, and shows a "Bounty Claimed" toast.
 
@@ -89,7 +93,9 @@ A completed bounty counts as a claimed bounty in your bestiary and adds bonus ki
 
 ### Refresh and cooldowns
 
-Postings change once a Minecraft day by default. After you complete or abandon a bounty, the board goes quiet for a while and the footer tells you when to come back: "More bounties should arrive in 10 minutes." Abandoning can be turned off entirely in the config. Bounties are posted for the hostiles and bosses only, with rewards sized to the creature's class.
+Postings change once a Minecraft day by default. After you complete or abandon a bounty, the board goes quiet for a while and the footer tells you when to come back: "More bounties should arrive in 10 minutes." Abandoning can be turned off entirely in the config.
+
+Bounties are posted for the hostiles and bosses only. Rewards are themed to the creature and sized to its class: common mobs pay in iron, Nether mobs and the rarer undead in gold, illagers in emeralds, creepers and endermen in diamonds, and bosses in netherite and diamonds, with experience to match.
 
 ---
 
@@ -107,7 +113,7 @@ Every so often, if the tracked creature is nearby, a short message tells you whe
 |---|---|
 | **Scent** | Whether it is close and roughly which way: "You sense the Zombie to the left." |
 | **Trail** | A finer direction and about how far: "You're tracking the Zombie about 30 blocks away, ahead to the left." |
-| **Track** | Senses it from further off, and a wisp of light spirals away from you toward it. |
+| **Track** | The same, from further off, and a wisp of light spirals away from you toward it. |
 
 The wisp points the way without marking the creature itself. It stops well short, so the last stretch is still a hunt.
 
@@ -115,7 +121,7 @@ The wisp points the way without marking the creature itself. It stops well short
 
 ### Active Hunt
 
-Hold the hunt key (G by default, rebindable) for two seconds. A compass appears above your hotbar and points the way to the nearest tracked creature, with an up or down marker when it is above or below you. After a while the trail goes cold and you wait before hunting again.
+Hold the hunt key (G by default, rebindable) for two seconds. A compass appears above your hotbar and points the way to the nearest tracked creature, with an up or down marker when it is above or below you. A timer counts the hunt down. When it ends the trail goes cold and the timer shows how long until you can hunt again.
 
 | Level | What you get |
 |---|---|
@@ -229,7 +235,13 @@ One file per creature at `data/<namespace>/bounty/<entity>.json`, named the same
 | `kills` | 3 | How many the player must slay. |
 | `weight` | 10 | How likely it is to be posted, relative to the other bounties. |
 | `bonus_kills` | 0 | Kills added to the creature's bestiary entry when the bounty is completed. |
-| `rewards` | none | A list of `item` rewards (`item`, `count`) and `experience` rewards (`amount`, in points). |
+| `rewards` | none | A list of rewards, below. |
+
+| `type` | Fields | Effect |
+|---|---|---|
+| `item` | `item`, `count` | Gives the items. Overflow drops at the player's feet. |
+| `experience` | `amount` | Gives experience points. |
+| `pmmo_xp` | `xp` | Gives Project MMO skill experience, written as `"skill/amount"`, for example `"combat/500"`. Ignored when Project MMO is not installed. |
 
 Unlike entries, bounty files do not merge. The highest pack's file wins.
 
@@ -267,14 +279,14 @@ Per Passive Sense level:
 | Option | Scent | Trail | Track | Meaning |
 |---|---|---|---|---|
 | `range` | 24 | 32 | 48 | How far away, in blocks, a creature can be sensed. |
-| `pingIntervalSeconds` | 20 | 15 | 12 | Seconds between pings. |
+| `pingIntervalSeconds` | 25 | 19 | 15 | Seconds between pings. |
 
 Per Active Hunt level:
 
 | Option | Hunt | Sight | Mark | Meaning |
 |---|---|---|---|---|
 | `durationSeconds` | 30 | 30 | 30 | How long a hunt lasts. |
-| `cooldownSeconds` | 90 | 75 | 60 | Seconds after a hunt ends before the next can start. |
+| `cooldownSeconds` | 240 | 180 | 150 | Seconds after a hunt ends before the next can start. |
 | `arrowRange` | 48 | 48 | 64 | How far away, in blocks, the compass can find a creature. |
 
 And overall:
@@ -311,10 +323,14 @@ All `/bestiary` commands need operator level 2.
 | `/bestiary get <player> <entity>` | Show kills, bounties, and the milestone reached. |
 | `/bestiary reset <players> [entity]` | Clear progress for one creature, or everything. |
 | `/bestiary complete <players> [entity]` | Raise progress to the final milestone for one entry or all of them. |
-| `/bestiary board reroll <players>` | Give the players new postings now. |
+| `/bestiary board reroll` | Post a new set of bounties for everyone now. |
 | `/bestiary board clear <players>` | Drop the players' active bounty and cooldown. |
 
 ---
+
+## Mod Compatibility
+
+- **Project MMO** (optional): bounties can reward skill experience with the `pmmo_xp` reward type. The shipped bounties do not use it. It is there for packs that run PMMO.
 
 ## Planned Features
 
