@@ -257,12 +257,12 @@ Normals stay tiny because there are 44 of them and attributes stack across every
 
 | Attribute | Normal unit | Given by |
 |---|---|---|
-| `generic.max_health` | +0.5 | cow, giant, mooshroom, pig, zombie, zombie_villager · evoker (elite) · wither (major, +4) |
-| `generic.armor` | +0.5 | husk, sheep, shulker · elder_guardian (minor, +2) |
+| `generic.max_health` | +0.5 | cow, giant, mooshroom, pig, zombie, zombie_villager · evoker (elite) · wither (major, **+6**) |
+| `generic.armor` | +0.5 | husk, sheep, shulker · elder_guardian (minor, **+4**) |
 | `generic.armor_toughness` | +0.25 | pufferfish · wither_skeleton (elite) |
-| `generic.knockback_resistance` | +0.025 | hoglin, zoglin · ravager (elite) · warden (minor, +0.1) |
+| `generic.knockback_resistance` | +0.025 | hoglin, zoglin · ravager (elite) · warden (minor, **+0.3**) |
 | `generic.explosion_knockback_resistance` | +0.025 | creeper, ghast |
-| `generic.movement_speed` (`add_multiplied_base`) | +0.5% | pillager, stray, vex · illusioner (elite) · ender_dragon (major, +4%) |
+| `generic.movement_speed` (`add_multiplied_base`) | +0.5% | pillager, stray, vex · illusioner (elite) · ender_dragon (major, **+10%**) |
 | `generic.attack_damage` | +0.1 | blaze, polar_bear, vindicator, zombified_piglin · piglin_brute (elite) |
 | `generic.attack_speed` (`add_multiplied_base`) | +1% | cave_spider, skeleton |
 | `generic.jump_strength` (`add_multiplied_base`) | +1% | goat, magma_cube, rabbit · breeze (elite) |
@@ -276,7 +276,10 @@ Normals stay tiny because there are 44 of them and attributes stack across every
 | `player.mining_efficiency` | +0.25 | silverfish |
 | `player.submerged_mining_speed` (`add_multiplied_base`) | +2% | guardian |
 
-Everything stacked together stays small: +8 max health in total, about +6.5% movement speed.
+Everything stacked together stays small except the bosses, which are meant to feel earned: +9.5 max
+health in total, about +12.5% movement speed. The bosses break the 8× rule on purpose (wither +6
+health, ender dragon +10% speed, warden +0.3 knockback resistance, elder guardian +4 armor);
+everything else follows it.
 Keep new attributes positive: the Rewards tab colours negative modifiers red as penalties.
 
 **No entries for mobs players shouldn't kill.** The pack leaves out pets and tameables (cat, wolf,

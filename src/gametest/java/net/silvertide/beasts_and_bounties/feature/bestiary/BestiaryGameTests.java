@@ -97,7 +97,7 @@ public class BestiaryGameTests {
         double baseMaxHealth = player.getAttributeValue(Attributes.MAX_HEALTH);
         BestiaryProgress.all(player).put(EntityType.getKey(EntityType.WITHER), new Progress(15, 2));
         BestiaryAttributes.reapply(player);
-        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 4, "wither grants +4 max health across its milestones");
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 6, "wither grants +6 max health across its milestones");
 
         BestiaryProgress.all(player).clear();
         BestiaryAttributes.reapply(player);
@@ -114,8 +114,8 @@ public class BestiaryGameTests {
         BestiaryEntries.all().forEach((entityId, entry) -> BestiaryProgress.all(player).put(entityId, entry.milestones().getLast().requirement()));
         BestiaryProgress.all(player).put(EntityType.getKey(EntityType.ZOMBIE), Progress.NONE);
         BestiaryAttributes.reapply(player);
-        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 7.5, "every vanilla entry but the dev-overridden zombie stacks to +7.5 max health");
-        assertClose(helper, player.getAttributeValue(Attributes.ARMOR), baseArmor + 3.5, "every vanilla entry stacks to +3.5 armor");
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 9.5, "every vanilla entry but the dev-overridden zombie stacks to +9.5 max health");
+        assertClose(helper, player.getAttributeValue(Attributes.ARMOR), baseArmor + 5.5, "every vanilla entry stacks to +5.5 armor");
         helper.succeed();
     }
 
@@ -220,11 +220,11 @@ public class BestiaryGameTests {
         BestiaryEntry entry = BestiaryEntries.get(wither);
         double baseMaxHealth = player.getAttributeValue(Attributes.MAX_HEALTH);
         BestiaryProgress.set(player, wither, entry, kills(7));
-        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 2, "half the wither boon at 7 kills");
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 3, "half the wither boon at 7 kills");
         BestiaryProgress.set(player, wither, entry, kills(8));
-        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 2, "a milestone without an attribute changes nothing");
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 3, "a milestone without an attribute changes nothing");
         BestiaryProgress.set(player, wither, entry, new Progress(15, 2));
-        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 4, "the full wither boon at 15 kills and two bounties");
+        assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth + 6, "the full wither boon at 15 kills and two bounties");
         BestiaryProgress.set(player, wither, entry, Progress.NONE);
         helper.assertFalse(BestiaryProgress.all(player).containsKey(wither), "setting NONE removes the key");
         assertClose(helper, player.getAttributeValue(Attributes.MAX_HEALTH), baseMaxHealth, "the boon leaves with the progress");
