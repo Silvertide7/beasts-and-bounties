@@ -721,7 +721,7 @@ There is no datagen and no `data` run config.
   and `disableBlend()`, or its near-transparent edge pixels draw at full strength as stray colours.
 - Text on the parchment is drawn **without a drop shadow** (`drawString(..., false)`). Vanilla widgets
   default to a shadow, which smears dark text; 1.20.1's `EditBox` has no `setTextShadow`, so the
-  search text keeps its shadow.
+  search box overrides `renderWidget` to draw its text, hint and cursor without one (no selection highlight or scrolling, which a short search never needs).
 - **Milestones are the only progression and reward mechanism.** Advancements exist only as
   trophies (see Advancements): they never gate or grant anything, and no criterion or trigger is
   authored; the mod awards them from code.
@@ -929,8 +929,8 @@ port fixes across by hand.
   256×256 texture. `EntityPreview` replaces `renderEntityInInventory` (whose 1.20.1 form has no
   centring vector) for both screens; `SepiaBufferSource` wraps the 1.20.1 `VertexConsumer`
   (`vertex/color/uv/overlayCoords/uv2/normal/endVertex`). `Screen.renderBackground(GuiGraphics)` is
-  called from `render`. `EditBox` has no `setTextShadow` here, so the search text keeps vanilla's
-  shadow. The HUD is a `RegisterGuiOverlaysEvent` overlay (`IGuiOverlay`), the particle a
+  called from `render`. `EditBox` has no `setTextShadow` here, so the search box's `renderWidget` is overridden to draw
+  without one. The HUD is a `RegisterGuiOverlaysEvent` overlay (`IGuiOverlay`), the particle a
   `registerSpriteSet`.
 - **Datapack**: `pack_format` 15; folders `advancements/`, `recipes/`, `loot_tables/`,
   `structures/`; advancement icons use `"item"`, recipe results `"item"`. Breeze and bogged are

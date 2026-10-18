@@ -201,11 +201,22 @@ public final class BestiaryScreen extends Screen {
         top = (height - SPREAD_HEIGHT + TAB_HEIGHT - SELECTED_TAB_OVERLAP) / 2;
         bodyTextScale = GuiText.pixelSnappedBodyScale();
         String previousQuery = searchBox == null ? "" : searchBox.getValue();
-        searchBox = new EditBox(font, left + SEARCH_AREA.x(), titleTextY(SEARCH_AREA), SEARCH_AREA.width() - CLEAR_SEARCH_SIZE - CLEAR_SEARCH_GAP, GLYPH_HEIGHT,
-                Component.translatable("gui.beasts_and_bounties.search"));
+        Component searchHint = Component.translatable("gui.beasts_and_bounties.search");
+        searchBox = new EditBox(font, left + SEARCH_AREA.x(), titleTextY(SEARCH_AREA), SEARCH_AREA.width() - CLEAR_SEARCH_SIZE - CLEAR_SEARCH_GAP, GLYPH_HEIGHT, searchHint) {
+            @Override
+            public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+                String shown = font.plainSubstrByWidth(getValue(), getInnerWidth());
+                if (shown.isEmpty() && !isFocused()) {
+                    graphics.drawString(font, searchHint.copy().withStyle(ChatFormatting.DARK_GRAY), getX(), getY(), TEXT_COLOR, false);
+                    return;
+                }
+                graphics.drawString(font, shown, getX(), getY(), TEXT_COLOR, false);
+                if (!isFocused() || Util.getMillis() / 500 % 2 != 0) return;
+                int cursorX = getX() + font.width(shown.substring(0, Math.min(getCursorPosition(), shown.length())));
+                graphics.fill(cursorX, getY() - 1, cursorX + 1, getY() + GLYPH_HEIGHT + 1, TEXT_COLOR);
+            }
+        };
         searchBox.setBordered(false);
-        searchBox.setTextColor(TEXT_COLOR);
-        searchBox.setHint(Component.translatable("gui.beasts_and_bounties.search").withStyle(ChatFormatting.DARK_GRAY));
         searchBox.setValue(previousQuery);
         searchBox.setResponder(query -> applySearch());
         addRenderableWidget(searchBox);
