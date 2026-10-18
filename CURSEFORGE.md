@@ -1,38 +1,50 @@
-Beasts & Bounties does not add any new creature to Minecraft. It gives you many reasons to hunt the ones already out there though. Every kill is written into a Hunter's Bestiary that reveals a creature's secrets and sharpens you against it. Hunt one long enough and you learn to track it. A Bounty Board posts fresh hunts with real rewards. The hundredth zombie you slay should mean more than the first, and now it does.
+![](https://media.forgecdn.net/attachments/description/1693724/description_4395fccc-5ce2-425d-9773-2abc5967911c.png)
+
+Beasts & Bounties does not add any new creatures to Minecraft, but it does give you many reasons to hunt the ones already out there. Every kill is written into a Hunter's Bestiary that reveals a creature's secrets and sharpens you against it. Hunt one long enough and you learn to track it. A Bounty Board posts fresh hunts with real rewards. The hundredth zombie you slay should mean more than the first, and now it does.
+
+![](https://media.forgecdn.net/attachments/description/1693724/description_23eed997-268d-4557-a554-6b3677074d25.png)
 
 Everything is data-driven and works with any creature, vanilla or modded. A default vanilla datapack is included, so you can install it and play right away. It is built to be light on the server and should sit comfortably alongside other mods.
 
+![](https://media.forgecdn.net/attachments/description/1693724/description_fbb0b5f5-6fa2-4066-8d0c-1a54d64b5556.png)
+
 **Website:** [https://mods.silvertide.net/beasts-and-bounties](https://mods.silvertide.net/beasts-and-bounties)
 
-**Requires [SilverLib](https://www.curseforge.com/minecraft/mc-mods/silverlib).**
+**Requires [SilverLib](https://www.curseforge.com/minecraft/mc-mods/silverlib)**
 
 ***
+
+![](https://media.forgecdn.net/attachments/description/1693724/description_3ca46bac-e8c0-4d21-bcd2-5b02c5ca54b0.png)
 
 ## The Bestiary
 
 A book that contains all of the notes you've made from hunting the various entities around the world. Every kill or bounty completed on a creature brings you closer to milestones, which is when you unlock new insights or perks in the bestiary.
 
-A new creature starts as a nameless ??? and, milestone by milestone, gives up its name and picture, its stats, how it fights, its strengths and weaknesses, where it dwells, and more. Every player keeps their own book and progress.
+A new creature starts as a nameless ??? and, milestone by milestone, gives up its name and picture, its stats, how it fights, its strengths and weaknesses, where it dwells, and more. Every player keeps their own book and progress. Here's what all 4 tabs look like for a completed Husk. Most tabs have multiple pages.
+
+![](https://media.forgecdn.net/attachments/description/1693724/description_c2a4d1e5-06dd-40df-a13f-82e9bea5d8db.png)
 
 Knowledge is only half the battle. Milestones also grant permanent bonuses: more damage against that creature, less damage taken from it, extra loot rolls and bonus experience when killing it, and possibly permanent attributes. Slay enough creepers and explosions push you around a little less. Finish the spider and you step a little higher. It all stacks, so a seasoned hunter is a tougher one. Milestones can also unlock new ways of finding that creature, allowing you to track it.
 
- 
-
 ## Tracking
-
- 
 
 Know a creature well enough and you can sense it. Tracking unlocks through milestones and comes in two kinds, each with three levels.
 
 **Passive Sense** whispers to you now and then when your tracked creature is near: "You sense the Zombie to the left." Higher levels sharpen the direction, add a distance, and at the top send a wisp of light spiralling away from you toward it.
 
+![](https://media.forgecdn.net/attachments/description/1693724/description_c9f858cb-97db-4626-9a2f-b62bb5244b3b.png)
+
 **Active Hunt** is the chase. Hold the hunt key and a compass rises above your hotbar, giving you much more detailed information of where the creature is than the passive sense. At higher levels the creature glows through walls, for your eyes only. Then the trail goes cold, and you must wait a short while before actively tracking again.
+
+![](https://media.forgecdn.net/attachments/description/1693724/description_92f584bd-6027-45e1-9d26-2740e83d967b.png)
 
 ## Bounties
 
- 
+![](https://media.forgecdn.net/attachments/description/1693724/description_f93793fe-989c-4b75-a157-9c88334227cb.png)
 
 A Bounty Board posts WANTED posters: slay a number of that creature and claim the reward in items and experience. You hold one bounty at a time. Postings refresh every Minecraft day and are the same for everyone on the server, so friends can take the same hunt together. Completing a bounty also feeds your bestiary with a claimed bounty and bonus kills, and entries can require bounties to reach their later milestones.
+
+![](https://media.forgecdn.net/attachments/description/1693724/description_57279aa7-094a-4447-a8c5-ee905323175d.png)
 
 ***
 
@@ -41,6 +53,8 @@ A Bounty Board posts WANTED posters: slay a number of that creature and claim th
 ### 1\. Craft the Hunter's Bestiary
 
 Leather over a book over a bone, stacked in a column. Right-click to open it. You do not need to carry it for kills to count; the book is where you read what you have learned. It also lives in the Tools & Utilities creative tab.
+
+![](https://media.forgecdn.net/attachments/description/1693724/description_b659100d-dd21-438b-8c7d-aca0ad1cf745.png)
 
 ### 2\. Go hunting
 
@@ -77,7 +91,11 @@ For the hunt, hold the **Hunt Tracked Creature** key (G by default, rebindable) 
 
 ### 5\. Take a bounty
 
+![](https://media.forgecdn.net/attachments/description/1693724/description_bfaefeab-16a4-4dbc-9d91-0b791bc03fcc.png)
+
 Craft a Bounty Board from three paper across the top, any sign in the middle, and a stick below. Place it anywhere and click the board. Each poster shows the creature, "Slay 5", and the rewards. The poster always names the creature, even if your book still shows ???. Click Accept and the hunt is on.
+
+![](https://media.forgecdn.net/attachments/description/1693724/description_55e2a5f0-90f0-4d82-847d-5627dc2234f2.png)
 
 Every kill reports in on the action bar: "Bounty: 2 of 5 slain." Finish it and the rewards are yours, with a "Bounty Claimed" toast. Then the board goes quiet for a while before it posts again, and the footer tells you how long. Abandoning a bounty is allowed by default, with a longer wait after.
 
@@ -182,14 +200,14 @@ One file per creature at `data/<namespace>/bounty/<entity>.json`, named the same
 }
 ```
 
-| Field       |Default |Meaning                                                                    |
-| ----------- |------- |-------------------------------------------------------------------------- |
-| <code>kills</code> |3       |How many the player must slay.                                             |
-| <code>weight</code> |10      |How likely it is to be posted, relative to the other bounties.             |
-| <code>bonus_kills</code> |0       |Kills added to the creature's bestiary entry when the bounty is completed. |
-| <code>rewards</code> |none    |A list of rewards, below.                                                  |
+| Field       |Default     |Meaning                                                                                                                             |
+| ----------- |----------- |----------------------------------------------------------------------------------------------------------------------------------- |
+| <code>kills</code> |3           |How many the player must slay.                                                                                                      |
+| <code>weight</code> |10          |How likely it is to be posted, relative to the other bounties.                                                                      |
+| <code>bonus_kills</code> |0           |Kills added to the creature's bestiary entry when the bounty is completed.                                                          |
+| <code>rewards</code> |none        |A list of rewards, below.                                                                                                           |
 | <code>type</code> |Fields      |Effect                                                                                                                              |
-| ---------- |----------- |----------------------------------------------------------------------------------------------------------------------------------- |
+| ----------  |----------- |----------------------------------------------------------------------------------------------------------------------------------- |
 | <code>item</code> |<code>item</code>, <code>count</code> |Gives the items. Overflow drops at the player's feet.                                                                               |
 | <code>experience</code> |<code>amount</code> |Gives experience points.                                                                                                            |
 | <code>pmmo_xp</code> |<code>xp</code> |Gives Project MMO skill experience, written as <code>"skill/amount"</code>, for example <code>"combat/500"</code>. Ignored when Project MMO is not installed. |
@@ -267,15 +285,15 @@ And overall:
 
 All `/bestiary` commands need operator level 2.
 
-| Command                                                         |What it does                                                        |
-| --------------------------------------------------------------- |------------------------------------------------------------------- |
-| <code>/bestiary kills &lt;set|add|remove&gt; &lt;players&gt; &lt;entity&gt; &lt;amount&gt;</code> |Change a player's kills for a creature.                             |
-| <code>/bestiary bounties &lt;set|add|remove&gt; &lt;players&gt; &lt;entity&gt; &lt;amount&gt;</code> |Change a player's claimed bounties for a creature.                  |
-| <code>/bestiary get &lt;player&gt; &lt;entity&gt;</code>        |Show kills, bounties, and the milestone reached.                    |
-| <code>/bestiary reset &lt;players&gt; [entity]</code>           |Clear progress for one creature, or everything.                     |
-| <code>/bestiary complete &lt;players&gt; [entity]</code>        |Raise progress to the final milestone for one entry or all of them. |
-| <code>/bestiary board reroll</code>                             |Post a new set of bounties for everyone now.                        |
-| <code>/bestiary board clear &lt;players&gt;</code>              |Drop the players' active bounty and cooldown.                       |
+| Command                                                                                 |What it does                                                        |
+| --------------------------------------------------------------------------------------- |------------------------------------------------------------------- |
+| <code>/bestiary kills &amp;lt;set|add|remove&amp;gt; &amp;lt;players&amp;gt; &amp;lt;entity&amp;gt; &amp;lt;amount&amp;gt;</code> |Change a player's kills for a creature.                             |
+| <code>/bestiary bounties &amp;lt;set|add|remove&amp;gt; &amp;lt;players&amp;gt; &amp;lt;entity&amp;gt; &amp;lt;amount&amp;gt;</code> |Change a player's claimed bounties for a creature.                  |
+| <code>/bestiary get &amp;lt;player&amp;gt; &amp;lt;entity&amp;gt;</code>                |Show kills, bounties, and the milestone reached.                    |
+| <code>/bestiary reset &amp;lt;players&amp;gt; [entity]</code>                           |Clear progress for one creature, or everything.                     |
+| <code>/bestiary complete &amp;lt;players&amp;gt; [entity]</code>                        |Raise progress to the final milestone for one entry or all of them. |
+| <code>/bestiary board reroll</code>                                                     |Post a new set of bounties for everyone now.                        |
+| <code>/bestiary board clear &amp;lt;players&amp;gt;</code>                              |Drop the players' active bounty and cooldown.                       |
 
 ***
 
