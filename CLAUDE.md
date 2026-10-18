@@ -1,6 +1,8 @@
 # Beasts & Bounties
 
-A NeoForge mod for **Minecraft 1.21.1** (NeoForge `21.1.249`, **Java 21**). Mod id `beasts_and_bounties`.
+A Forge mod for **Minecraft 1.20.1** (Forge `47.3.0`, **Java 17**, ForgeGradle 6). Mod id `beasts_and_bounties`.
+This is the `1-20-1` branch, a port of the NeoForge 1.21.1 `main` branch; see **Forge 1.20.1 port** at
+the end for everything that differs.
 It adds a **bestiary**: a book that fills in as you kill creatures. Every tracked creature has a
 data-driven entry made of **milestones**, each reached at a number of kills, bounties claimed, or
 both. Reaching one reveals more
@@ -19,7 +21,7 @@ bestiary progress with a bounty and bonus kills (10 / 5 / 1 / 1 by classificatio
 - **Merge once at load, look up at runtime.** When an entry is parsed, its milestones are folded into
   a running total for each milestone. At runtime you find the highest milestone reached and read
   that precomputed total. No merging on the damage path or in the render loop.
-- **The hot path is the damage event.** `LivingIncomingDamageEvent` fires for every hit on every
+- **The hot path is the damage event.** `LivingHurtEvent` fires for every hit on every
   entity. Do the `instanceof ServerPlayer` check first, then one `Map<EntityType<?>, BestiaryEntry>`
   lookup, then one kills lookup. Allocate nothing.
 - **Bestiary content is tuned in the datapack; tracking numbers in config.** There is no bestiary
@@ -101,7 +103,7 @@ player has. That makes the bounty system required past a chosen point. Two conse
   A3), so everything else is reachable by kills alone and the bounty board becomes required only
   for the top of each entry.
 
-"Text" means a vanilla `Component` (`ComponentSerialization.CODEC`), either a plain string or
+"Text" means a vanilla `Component` (``TextCodec`, JSON text), either a plain string or
 `{"translate": ...}`. Shipped entries use translate keys. Pack authors can use plain strings.
 
 **The entry appears in the book when the first milestone is reached.** A first milestone with
@@ -144,7 +146,11 @@ through `BestiaryProgress.bonuses(player, entityType | entityId)`.
 skipped when its entity id is not in `BuiltInRegistries.ENTITY_TYPE`, or when no milestones are left
 after merging (so `{"replace": true}` with no milestones **removes** a lower pack's entry). Files
 are parsed strictly (`GsonHelper.parse`): unquoted keys or trailing commas are rejected and logged. A single pack's file that fails to decode (bad JSON, an unknown attribute) is skipped
-and logged with its pack id, and the other packs' files for that entity still merge. Milestones are
+and logged with its pack id, and the other packs' files for that entity still merge. On 1.20.1 that
+takes two things the code does on purpose: optional fields holding anything richer than a number
+or flag go through `core/StrictCodecs.optionalField` (DFU 6's `optionalFieldOf` turns a decode
+error into "field absent", silently), and the loaders reject any `DataResult` with an error even
+when a partial value exists (a list with one bad element decodes partially). `badPackDataIsSkippedNotSwallowed` pins this. Milestones are
 sorted by `kills` at load, so authors can list them in any order. The loader is a
 `SimplePreparableReloadListener` over `FileToIdConverter.listMatchingResourceStacks`. It is not a
 `SimpleJsonResourceReloadListener`, which only sees the top pack's file, and not a datapack registry,
@@ -158,9 +164,12 @@ changes together lives together. The `@Mod` class stays thin and calls `XFeature
 ```
 src/main/java/net/silvertide/beasts_and_bounties/
   BeastsAndBountiesMod.java     @Mod entry point, MODID, id(path)
-  core/Payloads                 sendIfConnected: the one place payloads are sent to a player (skips connections without the channel)
+  core/Network                  the SimpleChannel: toClient / toServer registration, sendIfConnected (skips connections without the channel), sendToServer
+  core/PlayerData, PlayerDataEvents   persisted per-player data (codec → the player's PlayerPersisted NBT, cached by tag identity, forgotten on logout)
+  core/TextCodec                Codec<Component> over Component.Serializer (1.20.1 has no ComponentSerialization)
+  feature/combat/               CombatTracking, CombatLog, SupportLog, CombatTrackingEvents: the kill-credit participant tracking, inlined from SilverLib
   feature/bestiary/
-    BestiaryFeature             init: registers attachment, item, payloads, event listeners
+    BestiaryFeature             init: registers item, payloads, creative tab, the built-in datapack (addBuiltInDataPack)
     BestiaryEntry               classification + sorted milestones; precomputed Knowledge[] and Bonuses[]; milestoneReached(progress); displayName (??? until revealed)
     Milestone                   authored form: kills + Knowledge (inlined MapCodec) + rewards
     Knowledge                   visible info; Knowledge.merge(later) is the merge rule
@@ -168,7 +177,7 @@ src/main/java/net/silvertide/beasts_and_bounties/
     Classification, Tier        StringRepresentable enums carrying their display colour
     BestiaryEntries             server-side maps by id and by EntityType + the reload listener that merges pack files (replace)
     Progress                    record(kills, bounties): stored per creature and used as a milestone's requirement; meets(requirement)
-    BestiaryProgress            player attachment Map<ResourceLocation, Progress>; addKills / addBounties / set / resetAll; bonuses(player, type)
+    BestiaryProgress            PlayerData<Map<ResourceLocation, Progress>>; addKills / addBounties / set / resetAll / persist; bonuses(player, type)
     BestiaryAttributes          sums attribute rewards over every entry, reapplies the transient modifiers
     BestiaryEvents              death → credit, damage → multipliers, datapack sync → payloads + attributes, respawn → attributes
     BestiaryPayloads            entries sync, full progress sync, single progress delta
@@ -176,13 +185,13 @@ src/main/java/net/silvertide/beasts_and_bounties/
     BestiaryCommand             /bestiary admin commands
     BestiaryItem                right-click opens the screen on the client
   feature/bounty/
-    BountyFeature               init: config, board block + item, attachment, sound, payloads, creative tab
+    BountyFeature               init: config, board block + item, sound, payloads, creative tab
     BountyConfig                refresh period, offers shown, claim/abandon cooldowns, allowAbandon
     BountyDefinition, BountyReward   one bounty per entity: kills, weight, bonus_kills, item/experience rewards
     BountyDefinitions           SimpleJsonResourceReloadListener over data/<ns>/bounty (top pack wins)
     BountyOffers, BountyBoardData  the shared board: weighted picks per (world seed, refresh period, reroll count), never repeating the previous board; saved data
     BountyState                 record(active bounty?, cooldownEndsAt) with the accept/kill/end rules
-    PlayerBounties              player attachment; openBoard / accept / abandon / recordKill / complete
+    PlayerBounties              PlayerData<BountyState>; openBoard / accept / abandon / recordKill / complete
     BountyEvents                reload listener, join sync, death → recordKill for every participant
     BountyPayloads              BoardOpened, StateSync, BountyClaimed; AcceptBounty, AbandonBounty
     BountyBoardBlock            free-standing sign on a post; right-click on the board opens it for that player
@@ -194,10 +203,12 @@ src/main/java/net/silvertide/beasts_and_bounties/
 src/main/resources/
   beasts_and_bounties_logo.png  mod list logo (logoFile in mods.toml, logoBlur=false for pixel art); copy of bestiary_logo.png at the repo root
   assets/beasts_and_bounties/   lang, item model + texture, GUI spread + sprites
-  builtin_data_packs/vanilla_bestiary/   built-in datapack: data/minecraft/bestiary/ (54 entries: hostile mobs, bosses, and livestock/fish players normally kill) and data/minecraft/bounty/ (38 bounties: hostiles and bosses only), pack.png
-  data/beasts_and_bounties/advancement/ root, entry_complete, bestiary_complete (impossible criteria, awarded by code)
-  data/beasts_and_bounties/recipe/      bestiary (shaped: leather over book over bone), bounty_board (shaped: three paper over any sign over a stick); loot_table/blocks/bounty_board
-src/gametest/                   gametests + the empty structure template; loaded by dev runs, not in the jar
+  builtin_data_packs/vanilla_bestiary/   built-in datapack: data/minecraft/bestiary/ (52 entries: hostile mobs, bosses, and livestock/fish players normally kill; no breeze or bogged, they don't exist in 1.20.1) and data/minecraft/bounty/ (36 bounties: hostiles and bosses only), pack.png
+  builtin_data_packs/dev_fast_milestones/   dev-only pack (excluded from the jar); see Build & run
+  data/beasts_and_bounties/advancements/ root, entry_complete, bestiary_complete (impossible criteria, awarded by code; 1.20.1 folder names are plural)
+  data/beasts_and_bounties/recipes/     bestiary (shaped: leather over book over bone), bounty_board (shaped: three paper over any sign over a stick); loot_tables/blocks/bounty_board
+  data/beasts_and_bounties/structures/empty.nbt   the gametest template (excluded from the jar)
+  net/.../gametest/             gametests, MockPlayers and DevFastMilestonesPack, in the main source set but excluded from the jar
 ```
 
 ### Shipped vanilla entries
@@ -206,7 +217,7 @@ The vanilla entries are **not part of the mod's own data**. They ship as a built
 same way as Artifactory and Mortal Boons: `BestiaryFeature.addVanillaEntriesPack` registers it via
 `AddPackFindersEvent` with `PackSource.DEFAULT`, `alwaysActive = false` and `Pack.Position.TOP`.
 It is enabled by default and can be turned off on the create-world datapack screen or with
-`/datapack disable "mod/beasts_and_bounties:builtin_data_packs/vanilla_bestiary"`. Any pack can also
+`/datapack disable "beasts_and_bounties:builtin_data_packs/vanilla_bestiary"`. Any pack can also
 override a single entry by putting a file at the same path. With the pack disabled the mod tracks
 nothing until another pack adds entries. The vanilla text lang keys stay in the mod's `en_us.json`,
 because lang is a client resource and can't go in a datapack.
@@ -252,31 +263,34 @@ text and attribute the way the one-off script did; there is no checked-in genera
 
 **Every entry grants one themed attribute**, sized by classification. Each attribute has a normal
 "unit"; elites give 2×, minor bosses 4× and major bosses 8×. Normal and elite entries grant it at
-their final milestone; bosses grant half at each of two milestones (minor 5 and 10, major 3 and 5).
+their final milestone; bosses grant half at each of two milestones (minor 14 and 25, major 7 and 15).
 Normals stay tiny because there are 44 of them and attributes stack across every entry.
 
 | Attribute | Normal unit | Given by |
 |---|---|---|
-| `generic.max_health` | +0.5 | cow, giant, mooshroom, pig, zombie, zombie_villager · evoker (elite) · wither (major, +4) |
-| `generic.armor` | +0.5 | husk, sheep, shulker · elder_guardian (minor, +2) |
+| `generic.max_health` | +0.5 | cow, giant, mooshroom, pig, zombie, zombie_villager · evoker (elite) · wither (major, **+6**) |
+| `generic.armor` | +0.5 | husk, sheep, shulker · elder_guardian (minor, **+4**) |
 | `generic.armor_toughness` | +0.25 | pufferfish · wither_skeleton (elite) |
-| `generic.knockback_resistance` | +0.025 | hoglin, zoglin · ravager (elite) · warden (minor, +0.1) |
+| `generic.knockback_resistance` | +0.025 | hoglin, zoglin · ravager (elite) · warden (minor, **+0.3**) |
 | `generic.explosion_knockback_resistance` | +0.025 | creeper, ghast |
-| `generic.movement_speed` (`add_multiplied_base`) | +0.5% | pillager, stray, vex · illusioner (elite) · ender_dragon (major, +4%) |
+| `generic.movement_speed` (`add_multiplied_base`) | +0.5% | pillager, stray, vex · illusioner (elite) · ender_dragon (major, **+10%**) |
 | `generic.attack_damage` | +0.1 | blaze, polar_bear, vindicator, zombified_piglin · piglin_brute (elite) |
 | `generic.attack_speed` (`add_multiplied_base`) | +1% | cave_spider, skeleton |
-| `generic.jump_strength` (`add_multiplied_base`) | +1% | goat, magma_cube, rabbit · breeze (elite) |
+| `generic.movement_speed` (`add_multiplied_base`, was `jump_strength` on 1.21) | +1% | goat, magma_cube, rabbit |
 | `generic.safe_fall_distance` | +0.25 | bat, chicken, phantom, slime |
 | `generic.luck` | +0.1 | endermite, piglin, tropical_fish, witch |
 | `generic.oxygen_bonus` | +0.2 | cod, glow_squid, squid |
 | `generic.water_movement_efficiency` | +0.02 | drowned, salmon |
-| `generic.movement_efficiency` | +0.02 | bogged |
+
 | `generic.step_height` | +0.05 | spider |
 | `player.block_interaction_range` | +0.1 | enderman |
 | `player.mining_efficiency` | +0.25 | silverfish |
 | `player.submerged_mining_speed` (`add_multiplied_base`) | +2% | guardian |
 
-Everything stacked together stays small: +8 max health in total, about +6.5% movement speed.
+Everything stacked together stays small except the major bosses, which are meant to feel earned:
++11.5 max health in total on this branch (see the port section for the remapped attributes), about
++12.5% movement speed. The bosses break the 8× rule on purpose (wither +6 health, ender dragon +10% speed, warden +0.3
+knockback resistance, elder guardian +4 armor); everything else follows it.
 Keep new attributes positive: the Rewards tab colours negative modifiers red as penalties.
 
 **No entries for mobs players shouldn't kill.** The pack leaves out pets and tameables (cat, wolf,
@@ -302,16 +316,18 @@ milestones at kills 1–22, **no bounty gating**, and +5 max health at the end i
 `LivingDeathEvent` at `EventPriority.LOWEST`, so totem and revive mods cancel first (cancelled events
 are not received). If the victim's type has an entry, every player in
 `CombatTracking.participants(victim, KILL_CREDIT_WINDOW_TICKS)` gets one kill. That function comes
-from **SilverLib**, a required dependency built partly for this mod. It covers group fights, pets and
-summons, and supporting healers. Kills of untracked types are never stored, so the attachment can't
-grow without limit.
+from the mod's own `feature/combat` package, inlined from SilverLib (which has no 1.20.1 build). It
+covers group fights, pets and summons (owners of `OwnableEntity` / `TraceableEntity`), and players who
+buffed a damager with a beneficial effect. Kills of untracked types are never stored, so the saved map
+can't grow without limit.
 
 All progress goes through **`BestiaryProgress.set`**, usually via `addKills` / `addBounties`. It
-writes the attachment, sends the delta payload, and reapplies attributes only if the reached
+writes the persisted map, sends the delta payload, and reapplies attributes only if the reached
 milestone changed. `addBounties` is called by the command and by a completed bounty.
 
 Progress is keyed by `ResourceLocation`, not `EntityType`, so counts for a removed mod's entities are
-kept and come back if the mod returns. The attachment is serialized and `copyOnDeath`.
+kept and come back if the mod returns. The map lives in the player's `PlayerPersisted` NBT, which Forge
+copies on every respawn.
 
 ### Bonuses
 
@@ -321,9 +337,9 @@ There are two kinds of bonus, and they work differently on purpose.
   `BestiaryEntry` builds a `Bonuses[]`, one per milestone. Entry `i` holds the final values with
   every reward up to and including milestone `i` already folded in, so `1 + Σbonus` and
   `max(0, 1 − Σresistance)`. No milestone reached means `Bonuses.NONE`. Finding the reached milestone
-  from progress is a short loop over the sorted requirements (vanilla entries have up to 15). After
+  from progress is a short loop over the sorted requirements (vanilla entries have up to 22). After
   that, the lookup is a single array index.
-- One `LivingIncomingDamageEvent` handler applies both:
+- One `LivingHurtEvent` handler applies both:
   - If the attacker is a `ServerPlayer`, the damage is multiplied by the victim type's dealt
     multiplier. `source.getEntity()` is used, so arrows count for the shooter.
   - If the victim is a `ServerPlayer`, the damage is multiplied by the attacker type's taken
@@ -345,13 +361,15 @@ There are two kinds of bonus, and they work differently on purpose.
 
 ### Sync
 
-There is no attachment sync on NeoForge 21.1, so it is done by hand:
+Forge 1.20.1 has no data sync of its own, so it is done by hand over the mod's `SimpleChannel`:
 
 - **Entries**: `OnDatapackSyncEvent` covers both join and `/reload`. The entries go out in
-  **chunks of 8** (`Entries.chunked`; the first chunk carries `first = true` and the client
-  replaces its map, later chunks merge in), because a custom payload is capped at 1 MiB and one
-  big map of a large pack would kick every client at login. Each payload carries the
-  authored milestones via `ByteBufCodecs.fromCodecWithRegistries`. `Component` needs registries.
+  **chunks of at most about 200 000 JSON characters** (`Entries.chunked` measures each entry; the
+  first chunk carries `first = true` and the client replaces its map, later chunks merge in), sent as
+  UTF-8 bytes (`writeByteArray`, not `writeUtf`, whose 32 767-character cap would reject big packs)
+  under the 1 MiB custom-payload limit. Each payload carries the
+  authored milestones as JSON via `FriendlyByteBuf.writeJsonWithCodec` (text is `TextCodec`, JSON
+  components, so no registry context is needed).
   NBT maps lose order, which is why stats are shown sorted. The client rebuilds the precomputed
   arrays with the same code.
 - **Progress**: a full map on login (`AllProgress`), then a single `ProgressUpdate(entity id,
@@ -360,9 +378,9 @@ There is no attachment sync on NeoForge 21.1, so it is done by hand:
   with the creature's name only if it has been revealed.
 - Server state (`BestiaryEntries`) and client state (`ClientBestiary`) are separate holders, even in
   singleplayer.
-- **Every payload goes through `core/Payloads.sendIfConnected`**, which skips a connection that
-  hasn't negotiated the mod's channel. NeoForge throws otherwise, and gametest mock players never
-  negotiate one. A multi-payload send would slip past that check as a bundle packet; don't rely on it.
+- **Every payload goes through `core/Network.sendIfConnected`**, which skips a connection whose
+  channel is missing or that hasn't negotiated the mod's channel (`SimpleChannel.isRemotePresent`);
+  gametest mock players never negotiate one.
 
 ### The book
 
@@ -448,9 +466,9 @@ There is no attachment sync on NeoForge 21.1, so it is done by hand:
 - **Model**: create one entity with `type.create(minecraft.level)` for the **selected entry only**,
   dropped when the selection changes or the screen closes. Spin it by setting body and head yaw from
   `Util.getMillis()`, one turn every 16 seconds. Scale it to fit using the larger of `getBbWidth()` and `getBbHeight()`.
-  Non-living or null results fall back to the placeholder. Rendering goes through
-  `InventoryScreen.renderEntityInInventory(graphics, x, y, scale, translate, pose, null, entity)`,
-  inside a scissor so large mobs can't spill over the page.
+  Non-living or null results fall back to the placeholder. Rendering goes through the mod's
+  `EntityPreview.render` (the 1.20.1 `renderEntityInInventory` has no centring vector), inside a
+  scissor so large mobs can't spill over the page.
 - Wrap the text into lines once, when the selection changes, not every frame. The same goes for
   everything else drawn per frame: row name lines are wrapped in `refresh()`, the header name line
   and Track button label/width in `rebuildHeader()`, and tab/arrow sprite ids are constants. The
@@ -535,7 +553,7 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   - `TrackingConfig` (SERVER, `beasts_and_bounties-tracking-server.toml`): per passive level the
     `range` and `pingIntervalSeconds`; per active level the `durationSeconds`, `cooldownSeconds`
     and `arrowRange`; plus `glowRange`, `huntScanIntervalTicks`, `huntHoldSeconds`,
-    `heightHintBlocks` and `distanceRoundingBlocks`. NeoForge syncs server configs to clients, so the HUD's above/below
+    `heightHintBlocks` and `distanceRoundingBlocks`. Forge syncs server configs to clients, so the HUD's above/below
     marker uses the same threshold.
   - `TrackingClientConfig` (CLIENT, `beasts_and_bounties-tracking-client.toml`): the wisp's
     `blocksPerTick`, `maxLengthBlocks`, `stopShortBlocks`, `swirlRadius` and `swirlRadiansPerTick`,
@@ -543,16 +561,16 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
   - What each level *does* stays in code: 4-way or 8-way, whether it gives a distance or a wisp,
     and the glow scope. Those are fixed fields on `PassiveTrackingLevel` / `ActiveTrackingLevel`,
     whose numeric getters read the config.
-- **State**: player attachment `tracking` =
+- **State**: `PlayerData` `tracking` =
   `TrackingState(Optional<creature>, huntEndsAt, cooldownEndsAt)`. The two times are game ticks.
-  It is serialized and `copyOnDeath`. **Absent means not tracking.** Stop removes it, except
+  It is persisted and copied on respawn. **Absent means not tracking.** Stop removes it, except
   during a cooldown, when a creature-less copy keeps `cooldownEndsAt` so Stop/Track can't reset the
   cooldown. The scanner removes that copy once the cooldown ends. Switching creatures ends the hunt
   but keeps the cooldown. **Levels are never stored**; they are read from progress so datapack
   changes apply at once. The Track / Stop / hunt rules are pure methods on `TrackingState`
   (`tracking`, `stopped`, `huntStarted`) and are gametested.
 - **Performance**: `TrackingScanner` runs on `PlayerTickEvent.Post`.
-  - A player with no attachment costs one null check.
+  - A player with no tracking state costs one cached lookup.
   - Passive scans at the level's ping interval (500 / 380 / 300 ticks) and active every 10 ticks, staggered by
     `(gameTime + player.getId()) % interval`.
   - A scan is one `level.getEntities(type, box, filter)`, answered from entity sections, so
@@ -561,14 +579,14 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
     whole seconds. If the tracked creature's unlocks vanish (reset, datapack change), that check
     stops tracking.
   - `HuntUpdate` is only sent when the target, the glow set (ids sorted) or the target's position
-    (moved over 4 blocks) changes; the transient `last_hunt_update` attachment remembers the last
-    one and is carried over on death by a `PlayerEvent.Clone` handler (a transient attachment
-    can't use `copyOnDeath`, which needs a serializer), since the hunt itself
+    (moved over 4 blocks) changes; `TrackingScanner`'s in-memory `LAST_HUNT_UPDATES` map (by player
+    UUID, dropped on logout) remembers the last one, and because it is keyed by UUID it survives
+    death on its own, since the hunt itself
     survives death and the client would otherwise keep a stale target. The client follows the
     live entity for the arrow when it has it loaded.
   - Pressing the hunt key during a hunt does nothing, on both sides.
 - **Sync**: `StateSync` on join (`OnDatapackSyncEvent`) and on every change, through
-  `Payloads.sendIfConnected`. `ClientTracking.clear()` runs on logout so no stale glow carries
+  `Network.sendIfConnected`. `ClientTracking.clear()` runs on logout so no stale glow carries
   across worlds, and switching or stopping clears the last ping text and wisp at once.
 - **Names**: tracking text uses `BestiaryEntry.displayName`, the same `???` gating as the book, so a
   pack that unlocks tracking before the name reveals nothing early.
@@ -589,7 +607,7 @@ Each is precomputed as the highest level reached, into `Bonuses.passiveTracking`
 
 ### Advancements
 
-Three vanilla advancements in `data/beasts_and_bounties/advancement/`, each with one
+Three vanilla advancements in `data/beasts_and_bounties/advancements/`, each with one
 `minecraft:impossible` criterion that `BestiaryAdvancements` awards from code inside
 `BestiaryProgress.set`, the one place every progress change passes through (kills, bounties,
 commands). They are trophies only: nothing reads them back.
@@ -637,29 +655,38 @@ There is no datagen and no `data` run config.
   `./gradlew publishMods` on a published GitHub release (or by hand with a dry-run option that
   posts to the test Discord webhook instead). Publishing is CurseForge only, through the
   mod-publish-plugin block in `build.gradle`: it uploads the jar with the `CHANGELOG.md` text as
-  the changelog, `silverlib` as a required dependency and `project-mmo` optional. The project id
+  the changelog and `project-mmo` optional. The project id
   lives in `gradle.properties` as `curseforge_project` (1693724) and
   the secrets are `CF_TOKEN`, `DISCORD_WEBHOOK_URL` and `DISCORD_WEBHOOK_TEST_URL`. Same setup
   as Mortal Boons minus Modrinth.
 
-- Versions come from `gradle.properties` only. `neoforge.mods.toml` is a **template** in
-  `src/main/templates/META-INF/` and gets expanded at build time.
-- SilverLib is added the same way as in Realms of Reverie:
-  `compileOnly` + `localRuntime "curse.maven:silverlib-1691772:${silverlib_version}"`, with a
-  `required` dependency in the mods.toml.
+- Versions come from `gradle.properties` only. `src/main/resources/META-INF/mods.toml` and `pack.mcmeta`
+  are expanded by `processResources`.
+- No SilverLib: its combat tracking is inlined (see Kill credit). Project MMO is `compileOnly fg.deobf`
+  (file 8303706 = PMMO 1.7.41) and optional in the mods.toml.
 - No datagen in v1. Entries, the item model, the recipe and lang are plain JSON.
-- **Dev-only fast zombie:** `src/gametest/resources/builtin_data_packs/dev_fast_milestones/` is a
-  datapack registered by `DevFastMilestonesPack` (also in the gametest source set). It replaces the
-  vanilla zombie with a copy whose 15 milestones sit at kills 1 through 15, so every zombie kill in a
-  dev run unlocks the next milestone. It ranks above the vanilla pack, which a gametest checks.
+- **Dev-only fast zombie:** `src/main/resources/builtin_data_packs/dev_fast_milestones/` is a
+  datapack registered by `DevFastMilestonesPack` (in the `gametest` package); both are excluded
+  from the jar by `build.gradle`. It replaces the
+  vanilla zombie with a copy whose 22 milestones sit at kills 1 through 22, so every zombie kill in a
+  dev run unlocks the next milestone. It ranks above the vanilla pack, which a gametest checks:
+  1.20.1 orders auto-added packs **by pack id** (`PackRepository` collects them in a `TreeMap`;
+  `Pack.Position` only matters in the selection screen), so the dev pack's id is
+  `beasts_and_bounties:dev_fast_milestones`, which sorts after
+  `beasts_and_bounties:builtin_data_packs/vanilla_bestiary`.
   The pack also gives the bat a very long description (a plain string, merged onto the bat's
   5-kill milestone) to exercise paging on the right page. Neither the pack nor the class ships in the jar. Tests that need vanilla thresholds use the
   skeleton instead.
-- Gametests live in the `gametest` source set (same setup as SilverLib), in `BestiaryGameTests`,
+- Gametests live in the `net.silvertide.beasts_and_bounties.gametest` package of the main source set
+  (excluded from the jar, as Player Abilities does), in `BestiaryGameTests`,
   `TrackingGameTests` and `BountyGameTests` (shipped bounties match entries, deterministic offers,
   accept/abandon rules, kills completing a bounty with rewards and progress, persistence). They cover data loading and merging, milestone maths, attribute reapply,
   kill credit end to end, the damage/loot/experience hooks (posted as real events), the admin
-  commands, attachment persistence and `copyOnDeath`, tracking rules, scans and direction maths.
+  commands, persistence and respawn copying (`ServerPlayer.restoreFrom`), tracking rules, scans and
+  direction maths. **Mock players come from `MockPlayers.inLevel(helper)`**, not
+  `helper.makeMockServerPlayerInLevel()`: Forge's login path calls `NetworkFilters.injectIfNecessary`,
+  which dereferences the connection's netty channel, and vanilla's 1.20.1 mock has none; the helper
+  wraps the `Connection` in an `EmbeddedChannel` first.
   Package-private helpers (`BestiaryEntries.mergeInPackOrder`, `TrackingScanner.passivePing`) exist
   for them. Rendering is checked in game.
 
@@ -670,9 +697,10 @@ There is no datagen and no `data` run config.
   `BestiaryItem.use` behind `isClientSide()`. Common code may call into it only from inside a lambda
   or a client-only branch, never through a field type, cast or annotation. `runGameTestServer`
   catches leaks.
-- Attribute ids in 1.21.1 still carry the `generic.` prefix (`minecraft:generic.max_health`). It was
-  dropped in 1.21.2.
-- `LivingIncomingDamageEvent` runs before armour, so bonuses scale the raw hit.
+- Attribute ids carry the `generic.` prefix (`minecraft:generic.max_health`); Forge adds
+  `forge:swim_speed`, `forge:block_reach`, `forge:step_height_addition` and friends.
+- `LivingHurtEvent` runs before armour, so bonuses scale the raw hit; combat participation is
+  recorded there too (LOWEST priority), capped at the victim's health plus absorption.
 - **Wording.** Bonus lines say what changes for the player, never "dealt" / "resisted": "+10%
   increased damage", "10% less damage taken", "50% chance of an extra loot roll", "+50% bonus
   experience". Each per-creature reward has a `.more` and a `.less` lang key chosen by sign, so a
@@ -687,26 +715,28 @@ There is no datagen and no `data` run config.
   Minecraft font is a bitmap, so any other scale blurs it. Body lines wrap at `width / scale`, and
   the lines per page divide by the scale, so more of a description fits on one page. The scale is
   computed in `init()` via `GuiText.pixelSnappedBodyScale()`, shared with the bounty board.
-- `GuiGraphics.blitSprite` / `blit` **do not enable blending**; vanilla widgets call
+- `GuiGraphics.blit` **does not enable blending**; vanilla widgets call
   `RenderSystem.enableBlend()` themselves. Any sprite with soft or faint edges (the bounty cards,
   the accept/abandon text, the tooltip, the hunt compass and its markers) must be drawn between `enableBlend()` + `defaultBlendFunc()`
   and `disableBlend()`, or its near-transparent edge pixels draw at full strength as stray colours.
 - Text on the parchment is drawn **without a drop shadow** (`drawString(..., false)`). Vanilla widgets
-  default to a shadow, which smears dark text; `EditBox` needs `setTextShadow(false)`.
+  default to a shadow, which smears dark text; 1.20.1's `EditBox` has no `setTextShadow`, so the
+  search text keeps its shadow.
 - **Milestones are the only progression and reward mechanism.** Advancements exist only as
   trophies (see Advancements): they never gate or grant anything, and no criterion or trigger is
   authored; the mod awards them from code.
-- `@EventBusSubscriber` leaves `bus` unset (the parameter is deprecated for removal): FML routes
-  each `@SubscribeEvent` by its event type, so mod-bus events (`RegisterKeyMappingsEvent`,
-  `AddPackFindersEvent`) and game-bus events can share a subscriber class. Registrations that need
-  the bus in hand (`DeferredRegister`, payloads, configs) go in `XFeature.init`.
+- `@Mod.EventBusSubscriber` defaults to the FORGE bus; a class holding mod-bus events
+  (`RegisterKeyMappingsEvent`, `RegisterGuiOverlaysEvent`, `RegisterParticleProvidersEvent`,
+  `AddPackFindersEvent`) must say `bus = Mod.EventBusSubscriber.Bus.MOD`, and such events never
+  share a class with game-bus ones. Registrations that need the bus in hand (`DeferredRegister`,
+  configs, creative tabs) go in `XFeature.init`; payloads register in the mod constructor.
 - **Gametest mock players never tick as players.** `PlayerTickEvent` fires from
   `ServerPlayer.doTick()`, which the connection drives, and a mock player's connection is never
   ticked. A test that needs the scanner (or anything on `PlayerTickEvent`) posts
-  `new PlayerTickEvent.Post(player)` itself, e.g. from `helper.onEachTick`. Mock players also
-  never negotiate mod channels, which is what `Payloads.sendIfConnected` guards against.
-- In singleplayer, payloads are passed in memory rather than serialized. Anything sent must be
-  immutable or a copy (the kills map is sent as `Map.copyOf`), never the live server object.
+  `new TickEvent.PlayerTickEvent(TickEvent.Phase.END, player)` itself, e.g. from `helper.onEachTick`. Mock players also
+  never negotiate mod channels, which is what `Network.sendIfConnected` guards against.
+- Forge serializes `SimpleChannel` packets even in singleplayer, but anything sent is still built
+  from immutable data or a copy (the kills map is sent as `Map.copyOf`), never the live server object.
 
 ### Bounties (`feature/bounty/`)
 
@@ -729,7 +759,7 @@ is only where you look. One bounty is active at a time.
   and 12–16 iron / 8–14 gold / 8–12 emeralds / 2–4 diamonds (zombie 8 kills, 12 iron, 100 XP at
   the cheap end; endermite 2 kills, 4 diamonds, 260 XP and shulker 4 kills, 4 diamonds, 300 XP at
   the dear end); elites ask 1–4 kills for 350–700 XP and 4–8 diamonds plus 12–24 of their theme
-  (iron for wither skeleton and breeze, gold for ravager and piglin brute, emeralds for evoker and
+  (iron for wither skeleton, gold for ravager and piglin brute, emeralds for evoker and
   illusioner); minor bosses 800 / 1000 XP with 2 / 3 netherite + 10 / 12 diamonds (elder guardian,
   warden); major bosses 1500 / 2000 XP with 4 / 5 netherite + 16 / 20 diamonds (wither, ender
   dragon). Weights follow commonness (12 for zombie, creeper, skeleton, spider; 3 for zoglin,
@@ -749,8 +779,8 @@ is only where you look. One bounty is active at a time.
   make common creatures show up more and rare ones less. The server sends them when the board opens
   (`BoardOpened(offers, periodEndsAt, state)`, each offer carrying the kills, item stacks, XP and
   habitat text the card shows) and recomputes them to validate `AcceptBounty`.
-- **State**: attachment `bounty` = `BountyState(Optional<ActiveBounty(entityId, killsRequired,
-  killsSoFar)>, cooldownEndsAt)`, serialized, `copyOnDeath`; absent = `NONE`. (An old save's
+- **State**: `PlayerData` `bounty` = `BountyState(Optional<ActiveBounty(entityId, killsRequired,
+  killsSoFar)>, cooldownEndsAt)`, persisted and copied on respawn; absent = `NONE`. (An old save's
   `rerolls` field is ignored by the codec.) Rules are pure:
   `canAccept(now)`, `accepted`, `killRecorded` (only for the matching creature), `ended(now,
   cooldown)`. Accept needs no active bounty and an elapsed cooldown. Abandon (`allowAbandon`) and
@@ -763,9 +793,9 @@ is only where you look. One bounty is active at a time.
   claim cooldown, the mod's `bounty.claimed` sound (delegates to vanilla's villager "yes", volume
   0.6) and a `BountyClaimed` payload for the client toast. **Accepting changes nothing in the
   book**; the kill and the bonus kills do.
-- **PMMO bridge** (`PmmoBridge`): Project MMO is an **optional** dependency (`compileOnly`
-  `curse.maven:pmmo-353935:8800342` = PMMO 2.10.47, `type="optional"` in the mods.toml, not on
-  the dev runtime). A `pmmo_xp` reward (`"xp": "skill/amount"`) is given on completion through `Core.get(level).getData().addXp(uuid,
+- **PMMO bridge** (`PmmoBridge`): Project MMO is an **optional** dependency (`compileOnly fg.deobf`
+  `curse.maven:pmmo-353935:8303706` = PMMO 1.7.41, `mandatory=false` in the mods.toml, not on
+  the dev runtime). A `pmmo_xp` reward (`"xp": "skill/amount"`) is given on completion through `Core.get(level).getData().setXpDiff(uuid,
   skill, amount)` only when PMMO is loaded (`ModList.isLoaded`, read once into a static final on first use); without PMMO the reward parses and is
   silently skipped. `PmmoBridge` is the only class that imports `harmonised.*`, and it is reached
   only behind `PmmoBridge.isLoaded()` so the class never loads without the mod. With PMMO
@@ -837,7 +867,7 @@ is only where you look. One bounty is active at a time.
   on the ground facing the player (four facings). Like vanilla's standing sign it is drawn at
   sign scale so the whole thing fits in one block: post 2×8, board 16×8 on top (y 8–16). The
   selection shape is post ∪ board, and **only a click on the board opens the menu**
-  (`useWithoutItem` checks the hit's y against the board bottom and passes otherwise); a block's
+  (`use` checks the hit's y against the board bottom and passes otherwise); a block's
   shape can't extend into the block above, which is why the sign had to fit in one. Drops itself; crafted shaped from three paper across
   the top, any sign (`#minecraft:signs`) in the middle and a stick below; Functional Blocks tab.
 
@@ -846,6 +876,68 @@ is only where you look. One bounty is active at a time.
 ### Later
 
 - Bounty rewards from loot tables; empowered bounty targets.
+
+## Forge 1.20.1 port
+
+What this branch does differently from `main` (NeoForge 1.21.1). Keep both in step feature-wise;
+port fixes across by hand.
+
+- **Build**: ForgeGradle `[6.0,6.2)` on Gradle 8.8, Java 17 toolchain, `official` mappings,
+  `org.spongepowered.mixin` for the refmap (`beasts_and_bounties.refmap.json`, `MixinConfigs` in the
+  jar manifest), `mod-publish-plugin` publishing to CurseForge with `modLoaders=forge` and the
+  publish tasks depending on `reobfJar`. `runGameTestServer` is the server-dist check; the dev client
+  needs a display (`runClient` fails headless with "Can't find a primary monitor").
+- **No attachments.** `core/PlayerData<T>` stores a codec'd value under
+  `beasts_and_bounties:<name>` in the player's `PlayerPersisted` NBT (so Forge copies it on death
+  and End exit) and caches the decoded value per player, keyed by the identity of the persisted
+  compound: when `Entity.load` or `restoreFrom` replaces that tag the cache misses and re-reads, so a
+  stale cache can never survive a reload. `getOrCache` hands out a mutable default without writing
+  NBT; `BestiaryProgress.persist` writes the map back after in-place edits. Combat logs of
+  non-player entities are decode-per-hit in `entity.getPersistentData()` (small, hit-driven).
+- **Networking**: one `SimpleChannel` (`core/Network`), packets are records with
+  `encode(FriendlyByteBuf)` / `static decode`. Client handlers are registered as **lambdas, never
+  method references** (`payload -> ClientX.handle(payload)`): a method reference links the handle at
+  registration and classloads the client class, which crashed the dedicated server at mod
+  construction (`Attempted to load class ... Screen for invalid dist DEDICATED_SERVER`). The
+  `DistExecutor.unsafeRunWhenOn` double lambda in `Network.toClient` keeps the call itself client-only.
+- **Events**: `@Mod.EventBusSubscriber` with `bus = MOD` spelled out for registration events
+  (`TrackingClientSetup`, `DevFastMilestonesPack`); every handler is `public static` (Forge's bus
+  skips package-private ones silently). `LivingHurtEvent` replaces `LivingIncomingDamageEvent` (both
+  pre-armour); combat tracking records `LivingDamageEvent` (post-armour, the real damage).
+  `TickEvent.PlayerTickEvent` / `ClientTickEvent` with a `Phase.END` check.
+- **Vanilla deltas**: `TextCodec` for `Component`s in codecs; `Codec.dispatch` takes `Codec`s, so the
+  reward `Type.codec()` methods return `MapCodec.codec()`; `Milestone.CODEC` validates with
+  `flatXmap` (no `Codec.validate`); `Codec.listOf()` has no bounds (an empty milestone list is
+  caught at merge time anyway); `AttributeModifier` is UUID-keyed (`BestiaryAttributes` derives one
+  UUID per operation); `Operation` names are mapped by `Reward.OPERATION_CODEC` so datapacks keep
+  the 1.21 spellings (`add_value`…); `Attribute` is used raw, not as a `Holder`; `SavedData` has no
+  factory/registry parameters; loot uses `KILLER_ENTITY` / `DIRECT_KILLER_ENTITY` and
+  `server.getLootData()`; advancements use `Advancement` + `getAdvancement`; the block has no codec and
+  overrides `use`; `WeightedEntry.Wrapper.getData()`; `DataResult.resultOrPartial` replaces
+  `ifError`/`ifSuccess`. Java 17: no pattern switches, `List.get(0)` / `get(size - 1)`, hand-rolled
+  `ceilDiv` and clamps.
+- **Attributes that don't exist on 1.20.1** were remapped in the vanilla pack (the themed reward
+  stays positive and small): explosion knockback resistance → knockback resistance; jump strength,
+  movement efficiency → movement speed; safe fall distance → +0.5 max health; oxygen bonus, water
+  movement efficiency, submerged mining speed → `forge:swim_speed`; step height →
+  `forge:step_height_addition`; block interaction range → `forge:block_reach`; mining efficiency →
+  attack speed. The maxed-bestiary total is therefore +11.5 max health here (with the wither's +6).
+- **GUI**: 1.20.1 has no GUI sprite atlas, so `bestiary/client/Sprite` draws each PNG by its own
+  path and size (`textures/gui/sprites/bestiary/<name>.png`), with `drawNineSliced` for the tooltip
+  and track button (the `.mcmeta` nine-slice files are ignored on 1.20.1) and `drawRegion` for the
+  poster fade. Never use the short `GuiGraphics.blit(texture, x, y, u, v, w, h)`: it assumes a
+  256×256 texture. `EntityPreview` replaces `renderEntityInInventory` (whose 1.20.1 form has no
+  centring vector) for both screens; `SepiaBufferSource` wraps the 1.20.1 `VertexConsumer`
+  (`vertex/color/uv/overlayCoords/uv2/normal/endVertex`). `Screen.renderBackground(GuiGraphics)` is
+  called from `render`. `EditBox` has no `setTextShadow` here, so the search text keeps vanilla's
+  shadow. The HUD is a `RegisterGuiOverlaysEvent` overlay (`IGuiOverlay`), the particle a
+  `registerSpriteSet`.
+- **Datapack**: `pack_format` 15; folders `advancements/`, `recipes/`, `loot_tables/`,
+  `structures/`; advancement icons use `"item"`, recipe results `"item"`. Breeze and bogged are
+  gone (52 entries, 36 bounties). The built-in packs are registered through
+  `Pack.readMetaAndCreate` + `PathPackResources` on the mod file's `findResource` path and are
+  auto-enabled on new worlds (packs not explicitly disabled are added in **id order**).
+- **PMMO**: 1.20.1's `IDataStorage` has `setXpDiff(uuid, skill, long)` instead of `addXp`.
 
 ---
 

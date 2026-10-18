@@ -1,121 +1,114 @@
 package net.silvertide.beasts_and_bounties.feature.tracking;
 
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.codec.NeoForgeStreamCodecs;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
+import net.silvertide.beasts_and_bounties.core.Network;
 import net.silvertide.beasts_and_bounties.feature.tracking.client.ClientTracking;
 
 import java.util.List;
 import java.util.Optional;
 
 public final class TrackingPayloads {
-    private TrackingPayloads() {}
-
-    static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToServer(SetTracked.TYPE, SetTracked.STREAM_CODEC, (payload, context) -> {
-            ServerPlayer player = (ServerPlayer) context.player();
-            payload.creature().ifPresentOrElse(creature -> PlayerTracking.track(player, creature), () -> PlayerTracking.stop(player));
-        });
-        registrar.playToServer(StartHunt.TYPE, StartHunt.STREAM_CODEC, (payload, context) -> PlayerTracking.startHunt((ServerPlayer) context.player()));
-        registrar.playToClient(StateSync.TYPE, StateSync.STREAM_CODEC, (payload, context) -> ClientTracking.setState(payload.state()));
-        registrar.playToClient(PassivePing.TYPE, PassivePing.STREAM_CODEC, (payload, context) -> ClientTracking.receivePing(payload));
-        registrar.playToClient(HuntUpdate.TYPE, HuntUpdate.STREAM_CODEC, (payload, context) -> ClientTracking.receiveHunt(payload));
-    }
-
-    public record SetTracked(Optional<ResourceLocation> creature) implements CustomPacketPayload {
-        static final Type<SetTracked> TYPE = new Type<>(BeastsAndBountiesMod.id("set_tracked"));
-        static final StreamCodec<ByteBuf, SetTracked> STREAM_CODEC =
-                ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC).map(SetTracked::new, SetTracked::creature);
-
-        @Override
-        public Type<SetTracked> type() {
-            return TYPE;
-        }
-    }
-
-    public record StartHunt() implements CustomPacketPayload {
-        static final Type<StartHunt> TYPE = new Type<>(BeastsAndBountiesMod.id("start_hunt"));
-        static final StreamCodec<ByteBuf, StartHunt> STREAM_CODEC = StreamCodec.unit(new StartHunt());
-
-        @Override
-        public Type<StartHunt> type() {
-            return TYPE;
-        }
-    }
-
-    public record StateSync(Optional<TrackingState> state) implements CustomPacketPayload {
-        static final Type<StateSync> TYPE = new Type<>(BeastsAndBountiesMod.id("tracking_state"));
-        static final StreamCodec<ByteBuf, StateSync> STREAM_CODEC =
-                ByteBufCodecs.optional(TrackingState.STREAM_CODEC).map(StateSync::new, StateSync::state);
-
-        @Override
-        public Type<StateSync> type() {
-            return TYPE;
-        }
-    }
-
-    private static final StreamCodec<ByteBuf, Vec3> VEC3_STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.DOUBLE, position -> position.x,
-            ByteBufCodecs.DOUBLE, position -> position.y,
-            ByteBufCodecs.DOUBLE, position -> position.z,
-            Vec3::new);
     private static final double TARGET_MOVED_RESEND_DISTANCE_SQUARED = 16;
 
-    public record PassivePing(ResourceLocation creature, int level, TrackingDirection direction, Optional<TrackingHeight> height,
-                              Optional<Integer> roundedDistance, Optional<Vec3> wispTarget) implements CustomPacketPayload {
-        static final Type<PassivePing> TYPE = new Type<>(BeastsAndBountiesMod.id("passive_ping"));
-        static final StreamCodec<RegistryFriendlyByteBuf, PassivePing> STREAM_CODEC = StreamCodec.composite(
-                ResourceLocation.STREAM_CODEC, PassivePing::creature,
-                ByteBufCodecs.VAR_INT, PassivePing::level,
-                NeoForgeStreamCodecs.enumCodec(TrackingDirection.class), PassivePing::direction,
-                ByteBufCodecs.optional(NeoForgeStreamCodecs.enumCodec(TrackingHeight.class)), PassivePing::height,
-                ByteBufCodecs.optional(ByteBufCodecs.VAR_INT), PassivePing::roundedDistance,
-                ByteBufCodecs.optional(VEC3_STREAM_CODEC), PassivePing::wispTarget,
-                PassivePing::new);
+    private TrackingPayloads() {}
 
-        @Override
-        public Type<PassivePing> type() {
-            return TYPE;
+    static void register() {
+        Network.toServer(SetTracked.class, SetTracked::encode, SetTracked::decode, (payload, player) ->
+                payload.creature().ifPresentOrElse(creature -> PlayerTracking.track(player, creature), () -> PlayerTracking.stop(player)));
+        Network.toServer(StartHunt.class, StartHunt::encode, StartHunt::decode, (payload, player) -> PlayerTracking.startHunt(player));
+        Network.toClient(StateSync.class, StateSync::encode, StateSync::decode, payload -> ClientTracking.setState(payload.state()));
+        Network.toClient(PassivePing.class, PassivePing::encode, PassivePing::decode, payload -> ClientTracking.receivePing(payload));
+        Network.toClient(HuntUpdate.class, HuntUpdate::encode, HuntUpdate::decode, payload -> ClientTracking.receiveHunt(payload));
+    }
+
+    private static void writeVec3(FriendlyByteBuf buf, Vec3 position) {
+        buf.writeDouble(position.x);
+        buf.writeDouble(position.y);
+        buf.writeDouble(position.z);
+    }
+
+    private static Vec3 readVec3(FriendlyByteBuf buf) {
+        return new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
+    }
+
+    public record SetTracked(Optional<ResourceLocation> creature) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeOptional(creature, FriendlyByteBuf::writeResourceLocation);
+        }
+
+        static SetTracked decode(FriendlyByteBuf buf) {
+            return new SetTracked(buf.readOptional(FriendlyByteBuf::readResourceLocation));
+        }
+    }
+
+    public record StartHunt() {
+        void encode(FriendlyByteBuf buf) {}
+
+        static StartHunt decode(FriendlyByteBuf buf) {
+            return new StartHunt();
+        }
+    }
+
+    public record StateSync(Optional<TrackingState> state) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeOptional(state, (out, value) -> value.write(out));
+        }
+
+        static StateSync decode(FriendlyByteBuf buf) {
+            return new StateSync(buf.readOptional(TrackingState::read));
+        }
+    }
+
+    public record PassivePing(ResourceLocation creature, int level, TrackingDirection direction, Optional<TrackingHeight> height,
+                              Optional<Integer> roundedDistance, Optional<Vec3> wispTarget) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeResourceLocation(creature);
+            buf.writeVarInt(level);
+            buf.writeEnum(direction);
+            buf.writeOptional(height, FriendlyByteBuf::writeEnum);
+            buf.writeOptional(roundedDistance, FriendlyByteBuf::writeVarInt);
+            buf.writeOptional(wispTarget, TrackingPayloads::writeVec3);
+        }
+
+        static PassivePing decode(FriendlyByteBuf buf) {
+            return new PassivePing(buf.readResourceLocation(), buf.readVarInt(), buf.readEnum(TrackingDirection.class),
+                    buf.readOptional(in -> in.readEnum(TrackingHeight.class)), buf.readOptional(FriendlyByteBuf::readVarInt),
+                    buf.readOptional(TrackingPayloads::readVec3));
         }
     }
 
     public record HuntTarget(int entityId, Vec3 position) {
-        static final StreamCodec<ByteBuf, HuntTarget> STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.VAR_INT, HuntTarget::entityId,
-                VEC3_STREAM_CODEC, HuntTarget::position,
-                HuntTarget::new);
+        void write(FriendlyByteBuf buf) {
+            buf.writeVarInt(entityId);
+            writeVec3(buf, position);
+        }
+
+        static HuntTarget read(FriendlyByteBuf buf) {
+            return new HuntTarget(buf.readVarInt(), readVec3(buf));
+        }
 
         boolean isCloseTo(HuntTarget other) {
             return entityId == other.entityId && position.distanceToSqr(other.position) < TARGET_MOVED_RESEND_DISTANCE_SQUARED;
         }
     }
 
-    public record HuntUpdate(Optional<HuntTarget> target, List<Integer> glowIds) implements CustomPacketPayload {
+    public record HuntUpdate(Optional<HuntTarget> target, List<Integer> glowIds) {
         public static final HuntUpdate NONE = new HuntUpdate(Optional.empty(), List.of());
-        static final Type<HuntUpdate> TYPE = new Type<>(BeastsAndBountiesMod.id("hunt_update"));
-        static final StreamCodec<ByteBuf, HuntUpdate> STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.optional(HuntTarget.STREAM_CODEC), HuntUpdate::target,
-                ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()), HuntUpdate::glowIds,
-                HuntUpdate::new);
+
+        void encode(FriendlyByteBuf buf) {
+            buf.writeOptional(target, (out, value) -> value.write(out));
+            buf.writeCollection(glowIds, FriendlyByteBuf::writeVarInt);
+        }
+
+        static HuntUpdate decode(FriendlyByteBuf buf) {
+            return new HuntUpdate(buf.readOptional(HuntTarget::read), buf.readList(FriendlyByteBuf::readVarInt));
+        }
 
         boolean needsNoResendFor(HuntUpdate newer) {
             if (!glowIds.equals(newer.glowIds) || target.isPresent() != newer.target.isPresent()) return false;
             return target.isEmpty() || target.get().isCloseTo(newer.target.get());
-        }
-
-        @Override
-        public Type<HuntUpdate> type() {
-            return TYPE;
         }
     }
 }

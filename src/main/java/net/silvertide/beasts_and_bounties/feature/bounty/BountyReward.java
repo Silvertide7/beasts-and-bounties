@@ -4,7 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.Item;
@@ -17,7 +17,7 @@ public sealed interface BountyReward {
 
     record Items(Item item, int count) implements BountyReward {
         static final MapCodec<Items> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(Items::item),
+                ForgeRegistries.ITEMS.getCodec().fieldOf("item").forGetter(Items::item),
                 ExtraCodecs.POSITIVE_INT.optionalFieldOf("count", 1).forGetter(Items::count)
         ).apply(instance, Items::new));
 
@@ -79,11 +79,11 @@ public sealed interface BountyReward {
             this.serializedName = serializedName;
         }
 
-        MapCodec<? extends BountyReward> codec() {
+        Codec<? extends BountyReward> codec() {
             return switch (this) {
-                case ITEM -> Items.CODEC;
-                case EXPERIENCE -> Experience.CODEC;
-                case PMMO_XP -> SkillExperience.CODEC;
+                case ITEM -> Items.CODEC.codec();
+                case EXPERIENCE -> Experience.CODEC.codec();
+                case PMMO_XP -> SkillExperience.CODEC.codec();
             };
         }
 

@@ -297,7 +297,7 @@
         },
         {
           "type": "attribute",
-          "attribute": "minecraft:generic.step_height",
+          "attribute": "forge:step_height_addition",
           "amount": 0.05,
           "operation": "add_value"
         }

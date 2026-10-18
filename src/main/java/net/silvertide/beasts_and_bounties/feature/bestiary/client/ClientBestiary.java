@@ -1,6 +1,6 @@
 package net.silvertide.beasts_and_bounties.feature.bestiary.client;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntry;
@@ -53,7 +53,7 @@ public final class ClientBestiary {
 
     public static Component creatureName(ResourceLocation entityId) {
         BestiaryEntry entry = entries.get(entityId);
-        return entry == null ? BuiltInRegistries.ENTITY_TYPE.get(entityId).getDescription() : entry.displayName(entityId, progress(entityId));
+        return entry == null ? ForgeRegistries.ENTITY_TYPES.getValue(entityId).getDescription() : entry.displayName(entityId, progress(entityId));
     }
 
     static Component displayName(ResourceLocation entityId, BestiaryEntry entry, Progress entityProgress) {

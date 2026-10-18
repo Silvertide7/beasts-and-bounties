@@ -1,49 +1,36 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.attachment.AttachmentType;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
-import net.silvertide.beasts_and_bounties.core.Payloads;
+import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.silvertide.beasts_and_bounties.core.Network;
+import net.silvertide.beasts_and_bounties.core.PlayerData;
+import net.silvertide.beasts_and_bounties.core.PlayerDataEvents;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntries;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntry;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryProgress;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public final class PlayerBounties {
     private static final float CLAIMED_VOLUME = 0.6f;
 
-    private static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
-            DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, BeastsAndBountiesMod.MODID);
-
-    static final Supplier<AttachmentType<BountyState>> STATE =
-            ATTACHMENT_TYPES.register("bounty",
-                    () -> AttachmentType.builder(() -> BountyState.NONE)
-                            .serialize(BountyState.CODEC)
-                            .copyOnDeath()
-                            .build());
+    private static final PlayerData<BountyState> STATE = PlayerDataEvents.register(new PlayerData<>("bounty", BountyState.CODEC));
 
     private PlayerBounties() {}
 
-    static void register(IEventBus modEventBus) {
-        ATTACHMENT_TYPES.register(modEventBus);
+    public static BountyState state(Player player) {
+        return STATE.get(player).orElse(BountyState.NONE);
     }
 
-    public static BountyState state(Player player) {
-        BountyState state = player.getExistingDataOrNull(STATE);
-        return state == null ? BountyState.NONE : state;
+    public static void setState(Player player, BountyState state) {
+        STATE.set(player, state);
     }
 
     static void openBoard(ServerPlayer player) {
@@ -61,7 +48,7 @@ public final class PlayerBounties {
                 .map(offer -> new BountyPayloads.Offer(offer.entityId(), offer.definition().kills(), offer.definition().itemRewards(),
                         offer.definition().experienceReward(), skillExperienceLines(offer.definition()), lastSeen(offer.entityId())))
                 .toList();
-        Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state, refreshOnly));
+        Network.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state, refreshOnly));
     }
 
     private static List<Component> skillExperienceLines(BountyDefinition definition) {
@@ -76,7 +63,7 @@ public final class PlayerBounties {
         return BountyConfig.showLastSeen() && entry != null ? entry.fullKnowledge().habitat() : List.of();
     }
 
-    static void accept(ServerPlayer player, ResourceLocation entityId) {
+    public static void accept(ServerPlayer player, ResourceLocation entityId) {
         long now = player.level().getGameTime();
         BountyState state = state(player);
         if (!state.canAccept(now)) {
@@ -95,7 +82,7 @@ public final class PlayerBounties {
         sendBoard(player, true);
     }
 
-    static void abandon(ServerPlayer player) {
+    public static void abandon(ServerPlayer player) {
         if (!BountyConfig.ALLOW_ABANDON.get() || state(player).active().isEmpty()) return;
         store(player, state(player).ended(player.level().getGameTime(), BountyConfig.abandonCooldownTicks()));
         player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.abandoned"), true);
@@ -128,7 +115,7 @@ public final class PlayerBounties {
         }
         store(player, state(player).ended(player.level().getGameTime(), BountyConfig.claimCooldownTicks()));
         player.playNotifySound(BountySounds.CLAIMED.get(), SoundSource.PLAYERS, CLAIMED_VOLUME, 1f);
-        Payloads.sendIfConnected(player, new BountyPayloads.BountyClaimed(bounty.entityId()));
+        Network.sendIfConnected(player, new BountyPayloads.BountyClaimed(bounty.entityId()));
     }
 
     static void reroll(MinecraftServer server) {
@@ -140,12 +127,12 @@ public final class PlayerBounties {
     }
 
     private static void store(ServerPlayer player, BountyState state) {
-        if (state.isEmpty(player.level().getGameTime())) player.removeData(STATE);
-        else player.setData(STATE, state);
-        Payloads.sendIfConnected(player, new BountyPayloads.StateSync(state(player)));
+        if (state.isEmpty(player.level().getGameTime())) STATE.remove(player);
+        else STATE.set(player, state);
+        Network.sendIfConnected(player, new BountyPayloads.StateSync(state(player)));
     }
 
     private static Component creatureName(ResourceLocation entityId) {
-        return BuiltInRegistries.ENTITY_TYPE.get(entityId).getDescription();
+        return ForgeRegistries.ENTITY_TYPES.getValue(entityId).getDescription();
     }
 }

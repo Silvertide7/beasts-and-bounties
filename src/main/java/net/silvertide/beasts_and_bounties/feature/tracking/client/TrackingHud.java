@@ -2,19 +2,18 @@ package net.silvertide.beasts_and_bounties.feature.tracking.client;
 
 import com.mojang.math.Axis;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.DeltaTracker;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
+import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.ClientBestiary;
+import net.silvertide.beasts_and_bounties.feature.bestiary.client.Sprite;
 import net.silvertide.beasts_and_bounties.feature.tracking.TrackingClientConfig;
 import net.silvertide.beasts_and_bounties.feature.tracking.TrackingDirection;
 import net.silvertide.beasts_and_bounties.feature.tracking.TrackingHeight;
@@ -24,11 +23,11 @@ import net.silvertide.beasts_and_bounties.feature.tracking.TrackingState;
 import java.util.List;
 
 final class TrackingHud {
-    private static final ResourceLocation RING_SPRITE = BeastsAndBountiesMod.id("bestiary/tracking_ring");
-    private static final ResourceLocation ARROW_SPRITE = BeastsAndBountiesMod.id("bestiary/tracking_arrow");
-    private static final ResourceLocation ABOVE_SPRITE = BeastsAndBountiesMod.id("bestiary/tracking_up");
-    private static final ResourceLocation BELOW_SPRITE = BeastsAndBountiesMod.id("bestiary/tracking_down");
-    private static final ResourceLocation TIMER_SPRITE = BeastsAndBountiesMod.id("bestiary/tracking_timer");
+    private static final Sprite RING_SPRITE = Sprite.of("tracking_ring", 44, 44);
+    private static final Sprite ARROW_SPRITE = Sprite.of("tracking_arrow", 16, 16);
+    private static final Sprite ABOVE_SPRITE = Sprite.of("tracking_up", 7, 5);
+    private static final Sprite BELOW_SPRITE = Sprite.of("tracking_down", 7, 5);
+    private static final Sprite TIMER_SPRITE = Sprite.of("tracking_timer", 8, 8);
 
     private static final int RING_SIZE = 30;
     private static final int RING_RADIUS = 14;
@@ -64,7 +63,7 @@ final class TrackingHud {
 
     private TrackingHud() {}
 
-    static void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
+    static void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
         if (minecraft.options.hideGui || player == null || minecraft.level == null) return;
@@ -72,7 +71,7 @@ final class TrackingHud {
         ClientTracking.noticeHuntPhaseChanges(now);
         boolean hunting = ClientTracking.state().filter(state -> state.isHunting(now)).isPresent();
         if (!hunting) renderPing(graphics, minecraft);
-        if (hunting) renderHuntCompass(graphics, minecraft, player, deltaTracker.getGameTimeDeltaPartialTick(true));
+        if (hunting) renderHuntCompass(graphics, minecraft, player, partialTick);
         ClientTracking.state().ifPresent(state -> renderHuntTimer(graphics, minecraft, state, now));
         if (ClientTracking.isHolding()) renderHold(graphics, minecraft);
     }
@@ -120,7 +119,7 @@ final class TrackingHud {
             int centerY = compassCenterY(graphics);
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
-            graphics.blitSprite(RING_SPRITE, centerX - RING_SIZE / 2, centerY - RING_SIZE / 2, RING_SIZE, RING_SIZE);
+            RING_SPRITE.draw(graphics, centerX - RING_SIZE / 2, centerY - RING_SIZE / 2, RING_SIZE, RING_SIZE);
 
             float bearing = relativeYaw * Mth.DEG_TO_RAD;
             int arrowX = centerX + Math.round(Mth.sin(bearing) * RING_RADIUS);
@@ -128,11 +127,10 @@ final class TrackingHud {
             graphics.pose().pushPose();
             graphics.pose().translate(arrowX, arrowY, 0);
             graphics.pose().mulPose(Axis.ZP.rotationDegrees(relativeYaw));
-            graphics.blitSprite(ARROW_SPRITE, -ARROW_SIZE / 2, -ARROW_SIZE / 2, ARROW_SIZE, ARROW_SIZE);
+            ARROW_SPRITE.draw(graphics, -ARROW_SIZE / 2, -ARROW_SIZE / 2, ARROW_SIZE, ARROW_SIZE);
             graphics.pose().popPose();
 
-            TrackingHeight.of(targetPosition.y - playerPosition.y).ifPresent(height -> graphics.blitSprite(
-                    height == TrackingHeight.ABOVE ? ABOVE_SPRITE : BELOW_SPRITE,
+            TrackingHeight.of(targetPosition.y - playerPosition.y).ifPresent(height -> (height == TrackingHeight.ABOVE ? ABOVE_SPRITE : BELOW_SPRITE).draw(graphics,
                     arrowX - HEIGHT_MARKER_WIDTH / 2,
                     height == TrackingHeight.ABOVE ? arrowY - ARROW_SIZE / 2 - HEIGHT_MARKER_GAP - HEIGHT_MARKER_HEIGHT : arrowY + ARROW_SIZE / 2 + HEIGHT_MARKER_GAP,
                     HEIGHT_MARKER_WIDTH, HEIGHT_MARKER_HEIGHT));
@@ -146,7 +144,7 @@ final class TrackingHud {
         boolean hunting = state.isHunting(now);
         long ticksLeft = hunting ? state.huntEndsAt() - now : state.ticksUntilReady(now);
         if (ticksLeft <= 0) return;
-        long secondsLeft = Math.ceilDiv(ticksLeft, SharedConstants.TICKS_PER_SECOND);
+        long secondsLeft = (ticksLeft + SharedConstants.TICKS_PER_SECOND - 1) / SharedConstants.TICKS_PER_SECOND;
         Component text = hunting ? timerText.textFor(secondsLeft) : cooldownText.textFor(secondsLeft);
         int width = TIMER_SIZE + TIMER_GAP + minecraft.font.width(text);
         int x = (graphics.guiWidth() - width) / 2;
@@ -154,7 +152,7 @@ final class TrackingHud {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1f, 1f, 1f, alpha / (float) OPAQUE);
-        graphics.blitSprite(TIMER_SPRITE, x, y, TIMER_SIZE, TIMER_SIZE);
+        TIMER_SPRITE.draw(graphics, x, y, TIMER_SIZE, TIMER_SIZE);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.disableBlend();
         graphics.drawString(minecraft.font, text, x + TIMER_SIZE + TIMER_GAP, y, (alpha << 24) | HUNT_TIMER_COLOR, false);

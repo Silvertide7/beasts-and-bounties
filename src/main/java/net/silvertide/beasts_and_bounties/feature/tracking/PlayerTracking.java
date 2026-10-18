@@ -1,63 +1,46 @@
 package net.silvertide.beasts_and_bounties.feature.tracking;
 
 import net.minecraft.SharedConstants;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.attachment.AttachmentType;
-import net.silvertide.beasts_and_bounties.core.Payloads;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.silvertide.beasts_and_bounties.core.Network;
+import net.silvertide.beasts_and_bounties.core.PlayerData;
+import net.silvertide.beasts_and_bounties.core.PlayerDataEvents;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntries;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntry;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryProgress;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public final class PlayerTracking {
     private static final float HUNT_START_VOLUME = 0.4f;
-
-    private static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
-            DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, BeastsAndBountiesMod.MODID);
-
-    static final Supplier<AttachmentType<TrackingState>> STATE =
-            ATTACHMENT_TYPES.register("tracking",
-                    () -> AttachmentType.builder(() -> new TrackingState(Optional.empty(), 0, 0))
-                            .serialize(TrackingState.CODEC)
-                            .copyOnDeath()
-                            .build());
-
-    static final Supplier<AttachmentType<TrackingPayloads.HuntUpdate>> LAST_HUNT_UPDATE =
-            ATTACHMENT_TYPES.register("last_hunt_update",
-                    () -> AttachmentType.builder(() -> TrackingPayloads.HuntUpdate.NONE).build());
+    private static final PlayerData<TrackingState> STATE = PlayerDataEvents.register(new PlayerData<>("tracking", TrackingState.CODEC));
 
     private PlayerTracking() {}
 
-    static void register(IEventBus modEventBus) {
-        ATTACHMENT_TYPES.register(modEventBus);
-    }
-
     public static Optional<TrackingState> state(Player player) {
-        return Optional.ofNullable(player.getExistingDataOrNull(STATE));
+        return STATE.get(player);
     }
 
-    static void track(ServerPlayer player, ResourceLocation creature) {
+    public static void setState(Player player, TrackingState state) {
+        STATE.set(player, state);
+    }
+
+    public static void track(ServerPlayer player, ResourceLocation creature) {
         if (!BestiaryProgress.bonuses(player, creature).hasTracking()) return;
-        player.setData(STATE, TrackingState.tracking(creature, state(player)));
+        STATE.set(player, TrackingState.tracking(creature, state(player)));
         sync(player);
     }
 
     static void stop(ServerPlayer player) {
         state(player).ifPresent(current -> {
             Optional<TrackingState> remaining = current.stopped(player.level().getGameTime());
-            if (remaining.isPresent()) player.setData(STATE, remaining.get());
-            else player.removeData(STATE);
+            if (remaining.isPresent()) STATE.set(player, remaining.get());
+            else STATE.remove(player);
             sync(player);
         });
     }
@@ -71,7 +54,7 @@ public final class PlayerTracking {
         int activeLevel = BestiaryProgress.bonuses(player, creature.get()).activeTracking();
         if (activeLevel == 0) {
             BestiaryEntry entry = BestiaryEntries.get(creature.get());
-            Component name = entry == null ? BuiltInRegistries.ENTITY_TYPE.get(creature.get()).getDescription()
+            Component name = entry == null ? ForgeRegistries.ENTITY_TYPES.getValue(creature.get()).getDescription()
                     : entry.displayName(creature.get(), BestiaryProgress.of(player, creature.get()));
             player.displayClientMessage(Component.translatable("tracking.beasts_and_bounties.no_active", name), true);
             return;
@@ -81,22 +64,22 @@ public final class PlayerTracking {
         if (current.isHunting(now)) return;
         Optional<TrackingState> hunting = current.huntStarted(now, ActiveTrackingLevel.of(activeLevel));
         if (hunting.isEmpty()) {
-            long secondsLeft = Math.ceilDiv(current.ticksUntilReady(now), SharedConstants.TICKS_PER_SECOND);
+            long secondsLeft = (current.ticksUntilReady(now) + SharedConstants.TICKS_PER_SECOND - 1) / SharedConstants.TICKS_PER_SECOND;
             player.displayClientMessage(Component.translatable("tracking.beasts_and_bounties.cooldown", secondsLeft), true);
             return;
         }
-        player.setData(STATE, hunting.get());
+        STATE.set(player, hunting.get());
         sync(player);
         player.playNotifySound(TrackingSounds.HUNT_START.get(), SoundSource.PLAYERS, HUNT_START_VOLUME, 1f);
         TrackingScanner.scanHunt(player);
     }
 
     static void clearExpiredCooldown(ServerPlayer player) {
-        player.removeData(STATE);
+        STATE.remove(player);
         sync(player);
     }
 
     static void sync(ServerPlayer player) {
-        Payloads.sendIfConnected(player, new TrackingPayloads.StateSync(state(player)));
+        Network.sendIfConnected(player, new TrackingPayloads.StateSync(state(player)));
     }
 }

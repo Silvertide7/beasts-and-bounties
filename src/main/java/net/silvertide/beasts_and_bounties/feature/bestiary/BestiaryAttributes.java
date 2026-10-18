@@ -1,27 +1,35 @@
 package net.silvertide.beasts_and_bounties.feature.bestiary;
 
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 
+import java.nio.charset.StandardCharsets;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
-final class BestiaryAttributes {
-    private record AttributeOperation(Holder<Attribute> attribute, AttributeModifier.Operation operation) {}
+public final class BestiaryAttributes {
+    private static final Map<AttributeModifier.Operation, UUID> MODIFIER_IDS = new EnumMap<>(AttributeModifier.Operation.class);
+
+    static {
+        for (AttributeModifier.Operation operation : AttributeModifier.Operation.values())
+            MODIFIER_IDS.put(operation, UUID.nameUUIDFromBytes(modifierName(operation).getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private record AttributeOperation(Attribute attribute, AttributeModifier.Operation operation) {}
 
     private BestiaryAttributes() {}
 
-    static void reapply(ServerPlayer player) {
+    public static void reapply(ServerPlayer player) {
         removeAll(player);
         totalAttributeBonuses(player).forEach((key, amount) -> {
             AttributeInstance instance = player.getAttribute(key.attribute());
-            if (instance != null) instance.addTransientModifier(new AttributeModifier(modifierId(key.operation()), amount, key.operation()));
+            if (instance != null) instance.addTransientModifier(new AttributeModifier(MODIFIER_IDS.get(key.operation()), modifierName(key.operation()), amount, key.operation()));
         });
     }
 
@@ -39,14 +47,14 @@ final class BestiaryAttributes {
     }
 
     private static void removeAll(ServerPlayer player) {
-        BuiltInRegistries.ATTRIBUTE.holders().forEach(attribute -> {
+        for (Attribute attribute : ForgeRegistries.ATTRIBUTES.getValues()) {
             AttributeInstance instance = player.getAttribute(attribute);
-            if (instance == null) return;
-            for (AttributeModifier.Operation operation : AttributeModifier.Operation.values()) instance.removeModifier(modifierId(operation));
-        });
+            if (instance == null) continue;
+            for (UUID modifierId : MODIFIER_IDS.values()) instance.removeModifier(modifierId);
+        }
     }
 
-    private static ResourceLocation modifierId(AttributeModifier.Operation operation) {
-        return BeastsAndBountiesMod.id("bestiary_" + operation.getSerializedName());
+    private static String modifierName(AttributeModifier.Operation operation) {
+        return BeastsAndBountiesMod.MODID + ":bestiary_" + operation.name().toLowerCase();
     }
 }

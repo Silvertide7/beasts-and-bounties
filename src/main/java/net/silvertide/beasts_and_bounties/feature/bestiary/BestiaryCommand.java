@@ -102,7 +102,7 @@ final class BestiaryCommand {
         for (ServerPlayer player : targets) {
             Progress progress = BestiaryProgress.of(player, entityId);
             long changed = change.apply.applyAsLong(counter.read.applyAsInt(progress), amount);
-            int clamped = Math.clamp(changed, 0, Integer.MAX_VALUE);
+            int clamped = (int) Math.max(0, Math.min(Integer.MAX_VALUE, changed));
             BestiaryProgress.set(player, entityId, entry, counter.write.apply(progress, clamped));
         }
         context.getSource().sendSuccess(() -> Component.translatable("commands.beasts_and_bounties.changed",
@@ -137,7 +137,7 @@ final class BestiaryCommand {
 
     private static void complete(ServerPlayer player, ResourceLocation entityId, BestiaryEntry entry) {
         Progress current = BestiaryProgress.of(player, entityId);
-        Progress finalRequirement = entry.milestones().getLast().requirement();
+        Progress finalRequirement = entry.milestones().get(entry.milestones().size() - 1).requirement();
         BestiaryProgress.set(player, entityId, entry, new Progress(
                 Math.max(current.kills(), finalRequirement.kills()),
                 Math.max(current.bounties(), finalRequirement.bounties())));

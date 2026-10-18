@@ -5,7 +5,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ComponentSerialization;
+import net.silvertide.beasts_and_bounties.core.StrictCodecs;
+import net.silvertide.beasts_and_bounties.core.TextCodec;
 
 import java.util.List;
 import java.util.Map;
@@ -27,19 +28,19 @@ public record Knowledge(
 ) {
     public static final Knowledge EMPTY = new Knowledge(false, false, Optional.empty(), Optional.empty(), Map.of(), List.of(), List.of(), List.of(), List.of(), List.of());
 
-    private static final Codec<List<Component>> TEXT_LIST = ComponentSerialization.CODEC.listOf();
+    private static final Codec<List<Component>> TEXT_LIST = TextCodec.CODEC.listOf();
 
     public static final MapCodec<Knowledge> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.BOOL.optionalFieldOf("name", false).forGetter(Knowledge::name),
             Codec.BOOL.optionalFieldOf("model", false).forGetter(Knowledge::model),
-            ComponentSerialization.CODEC.optionalFieldOf("type").forGetter(Knowledge::type),
-            ComponentSerialization.CODEC.optionalFieldOf("description").forGetter(Knowledge::description),
-            Codec.unboundedMap(Codec.STRING, Codec.either(Codec.DOUBLE, Tier.CODEC)).optionalFieldOf("stats", Map.of()).forGetter(Knowledge::stats),
-            TEXT_LIST.optionalFieldOf("attack_patterns", List.of()).forGetter(Knowledge::attackPatterns),
-            TEXT_LIST.optionalFieldOf("strengths", List.of()).forGetter(Knowledge::strengths),
-            TEXT_LIST.optionalFieldOf("weaknesses", List.of()).forGetter(Knowledge::weaknesses),
-            TEXT_LIST.optionalFieldOf("habitat", List.of()).forGetter(Knowledge::habitat),
-            TEXT_LIST.optionalFieldOf("notes", List.of()).forGetter(Knowledge::notes)
+            StrictCodecs.optionalField("type", TextCodec.CODEC).forGetter(Knowledge::type),
+            StrictCodecs.optionalField("description", TextCodec.CODEC).forGetter(Knowledge::description),
+            StrictCodecs.optionalField("stats", Codec.unboundedMap(Codec.STRING, Codec.either(Codec.DOUBLE, Tier.CODEC)), Map.of()).forGetter(Knowledge::stats),
+            StrictCodecs.optionalField("attack_patterns", TEXT_LIST, List.of()).forGetter(Knowledge::attackPatterns),
+            StrictCodecs.optionalField("strengths", TEXT_LIST, List.of()).forGetter(Knowledge::strengths),
+            StrictCodecs.optionalField("weaknesses", TEXT_LIST, List.of()).forGetter(Knowledge::weaknesses),
+            StrictCodecs.optionalField("habitat", TEXT_LIST, List.of()).forGetter(Knowledge::habitat),
+            StrictCodecs.optionalField("notes", TEXT_LIST, List.of()).forGetter(Knowledge::notes)
     ).apply(instance, Knowledge::new));
 
     public Knowledge merge(Knowledge later) {

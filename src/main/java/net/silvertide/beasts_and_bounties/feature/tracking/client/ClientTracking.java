@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.silvertide.beasts_and_bounties.core.Network;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.BestiaryScreen;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.ClientBestiary;
 import net.silvertide.beasts_and_bounties.feature.tracking.TrackingConfig;
@@ -87,7 +87,7 @@ public final class ClientTracking {
     }
 
     public static void requestTracking(Optional<ResourceLocation> creature) {
-        PacketDistributor.sendToServer(new TrackingPayloads.SetTracked(creature));
+        Network.sendToServer(new TrackingPayloads.SetTracked(creature));
     }
 
     static void tickHuntKey(boolean keyDown, long gameTime) {
@@ -106,7 +106,7 @@ public final class ClientTracking {
         if (holdTicks >= holdTicksRequired()) {
             holdTicks = 0;
             holdSpent = true;
-            PacketDistributor.sendToServer(new TrackingPayloads.StartHunt());
+            Network.sendToServer(new TrackingPayloads.StartHunt());
         }
     }
 
@@ -153,7 +153,7 @@ public final class ClientTracking {
         if (current.isHunting(gameTime)) return false;
         long ticksUntilReady = current.ticksUntilReady(gameTime);
         if (ticksUntilReady > 0) {
-            showMessage(Component.translatable("tracking.beasts_and_bounties.cooldown", Math.ceilDiv(ticksUntilReady, SharedConstants.TICKS_PER_SECOND)));
+            showMessage(Component.translatable("tracking.beasts_and_bounties.cooldown", (ticksUntilReady + SharedConstants.TICKS_PER_SECOND - 1) / SharedConstants.TICKS_PER_SECOND));
             return false;
         }
         return true;

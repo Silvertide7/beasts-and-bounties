@@ -1,21 +1,21 @@
 package net.silvertide.beasts_and_bounties.feature.tracking;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 public final class TrackingConfig {
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec SPEC;
 
     static final PassiveLevel[] PASSIVE_LEVELS = new PassiveLevel[PassiveTrackingLevel.values().length];
     static final ActiveLevel[] ACTIVE_LEVELS = new ActiveLevel[ActiveTrackingLevel.values().length];
-    static final ModConfigSpec.IntValue GLOW_RANGE;
-    static final ModConfigSpec.IntValue HUNT_SCAN_INTERVAL_TICKS;
-    public static final ModConfigSpec.IntValue HUNT_HOLD_SECONDS;
-    static final ModConfigSpec.DoubleValue HEIGHT_HINT_BLOCKS;
-    static final ModConfigSpec.IntValue DISTANCE_ROUNDING_BLOCKS;
+    static final ForgeConfigSpec.IntValue GLOW_RANGE;
+    static final ForgeConfigSpec.IntValue HUNT_SCAN_INTERVAL_TICKS;
+    public static final ForgeConfigSpec.IntValue HUNT_HOLD_SECONDS;
+    static final ForgeConfigSpec.DoubleValue HEIGHT_HINT_BLOCKS;
+    static final ForgeConfigSpec.IntValue DISTANCE_ROUNDING_BLOCKS;
 
-    record PassiveLevel(ModConfigSpec.IntValue range, ModConfigSpec.IntValue pingIntervalSeconds) {}
+    record PassiveLevel(ForgeConfigSpec.IntValue range, ForgeConfigSpec.IntValue pingIntervalSeconds) {}
 
-    record ActiveLevel(ModConfigSpec.IntValue durationSeconds, ModConfigSpec.IntValue cooldownSeconds, ModConfigSpec.IntValue arrowRange) {}
+    record ActiveLevel(ForgeConfigSpec.IntValue durationSeconds, ForgeConfigSpec.IntValue cooldownSeconds, ForgeConfigSpec.IntValue arrowRange) {}
 
     private static final int[] DEFAULT_PASSIVE_RANGES = {24, 32, 48};
     private static final int[] DEFAULT_PING_INTERVALS_SECONDS = {25, 19, 15};
@@ -26,14 +26,14 @@ public final class TrackingConfig {
     private static final int MAX_SECONDS = 3600;
 
     static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
         builder.comment("Passive tracking: an occasional ping about the nearest tracked creature.").push("passive");
         for (int i = 0; i < PASSIVE_LEVELS.length; i++) {
             builder.push("level" + (i + 1));
-            ModConfigSpec.IntValue range = builder.comment("How far away, in blocks, a creature can be sensed.")
+            ForgeConfigSpec.IntValue range = builder.comment("How far away, in blocks, a creature can be sensed.")
                     .defineInRange("range", DEFAULT_PASSIVE_RANGES[i], 1, MAX_RANGE_BLOCKS);
-            ModConfigSpec.IntValue interval = builder.comment("Seconds between pings.")
+            ForgeConfigSpec.IntValue interval = builder.comment("Seconds between pings.")
                     .defineInRange("pingIntervalSeconds", DEFAULT_PING_INTERVALS_SECONDS[i], 1, MAX_SECONDS);
             PASSIVE_LEVELS[i] = new PassiveLevel(range, interval);
             builder.pop();
@@ -47,11 +47,11 @@ public final class TrackingConfig {
         builder.comment("Active tracking: the hunt keybind, with a duration and then a cooldown.").push("active");
         for (int i = 0; i < ACTIVE_LEVELS.length; i++) {
             builder.push("level" + (i + 1));
-            ModConfigSpec.IntValue duration = builder.comment("How long a hunt lasts, in seconds.")
+            ForgeConfigSpec.IntValue duration = builder.comment("How long a hunt lasts, in seconds.")
                     .defineInRange("durationSeconds", DEFAULT_HUNT_DURATIONS_SECONDS[i], 1, MAX_SECONDS);
-            ModConfigSpec.IntValue cooldown = builder.comment("Seconds after a hunt ends before the next can start.")
+            ForgeConfigSpec.IntValue cooldown = builder.comment("Seconds after a hunt ends before the next can start.")
                     .defineInRange("cooldownSeconds", DEFAULT_HUNT_COOLDOWNS_SECONDS[i], 0, MAX_SECONDS);
-            ModConfigSpec.IntValue arrowRange = builder.comment("How far away, in blocks, the hunt arrow can find a creature.")
+            ForgeConfigSpec.IntValue arrowRange = builder.comment("How far away, in blocks, the hunt arrow can find a creature.")
                     .defineInRange("arrowRange", DEFAULT_ARROW_RANGES[i], 1, MAX_RANGE_BLOCKS);
             ACTIVE_LEVELS[i] = new ActiveLevel(duration, cooldown, arrowRange);
             builder.pop();

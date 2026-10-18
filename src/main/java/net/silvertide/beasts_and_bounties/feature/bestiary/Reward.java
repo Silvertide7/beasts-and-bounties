@@ -1,23 +1,28 @@
 package net.silvertide.beasts_and_bounties.feature.bestiary;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraftforge.registries.ForgeRegistries;
+
+import java.util.Arrays;
 
 public sealed interface Reward {
     Codec<Reward> CODEC = Type.CODEC.dispatch("type", Reward::type, Type::codec);
 
     Type type();
 
-    record AttributeBonus(Holder<Attribute> attribute, double amount, AttributeModifier.Operation operation) implements Reward {
+    Codec<AttributeModifier.Operation> OPERATION_CODEC = Codec.STRING.comapFlatMap(Reward::parseOperation, Reward::operationName);
+
+    record AttributeBonus(Attribute attribute, double amount, AttributeModifier.Operation operation) implements Reward {
         static final MapCodec<AttributeBonus> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                Attribute.CODEC.fieldOf("attribute").forGetter(AttributeBonus::attribute),
+                ForgeRegistries.ATTRIBUTES.getCodec().fieldOf("attribute").forGetter(AttributeBonus::attribute),
                 Codec.DOUBLE.fieldOf("amount").forGetter(AttributeBonus::amount),
-                AttributeModifier.Operation.CODEC.fieldOf("operation").forGetter(AttributeBonus::operation)
+                OPERATION_CODEC.fieldOf("operation").forGetter(AttributeBonus::operation)
         ).apply(instance, AttributeBonus::new));
 
         @Override
@@ -80,6 +85,22 @@ public sealed interface Reward {
         }
     }
 
+    static String operationName(AttributeModifier.Operation operation) {
+        return switch (operation) {
+            case ADDITION -> "add_value";
+            case MULTIPLY_BASE -> "add_multiplied_base";
+            case MULTIPLY_TOTAL -> "add_multiplied_total";
+        };
+    }
+
+    static DataResult<AttributeModifier.Operation> parseOperation(String name) {
+        return Arrays.stream(AttributeModifier.Operation.values())
+                .filter(operation -> operationName(operation).equals(name) || operation.name().equalsIgnoreCase(name))
+                .findFirst()
+                .map(DataResult::success)
+                .orElseGet(() -> DataResult.error(() -> "Unknown attribute operation: " + name));
+    }
+
     enum Type implements StringRepresentable {
         ATTRIBUTE("attribute"),
         DAMAGE_BONUS("damage_bonus"),
@@ -97,15 +118,15 @@ public sealed interface Reward {
             this.serializedName = serializedName;
         }
 
-        MapCodec<? extends Reward> codec() {
+        Codec<? extends Reward> codec() {
             return switch (this) {
-                case ATTRIBUTE -> AttributeBonus.CODEC;
-                case DAMAGE_BONUS -> DamageBonus.CODEC;
-                case DAMAGE_RESISTANCE -> DamageResistance.CODEC;
-                case EXTRA_LOOT -> ExtraLoot.CODEC;
-                case BONUS_EXPERIENCE -> BonusExperience.CODEC;
-                case PASSIVE_TRACKING -> PassiveTracking.CODEC;
-                case ACTIVE_TRACKING -> ActiveTracking.CODEC;
+                case ATTRIBUTE -> AttributeBonus.CODEC.codec();
+                case DAMAGE_BONUS -> DamageBonus.CODEC.codec();
+                case DAMAGE_RESISTANCE -> DamageResistance.CODEC.codec();
+                case EXTRA_LOOT -> ExtraLoot.CODEC.codec();
+                case BONUS_EXPERIENCE -> BonusExperience.CODEC.codec();
+                case PASSIVE_TRACKING -> PassiveTracking.CODEC.codec();
+                case ACTIVE_TRACKING -> ActiveTracking.CODEC.codec();
             };
         }
 

@@ -297,8 +297,8 @@
         },
         {
           "type": "attribute",
-          "attribute": "minecraft:player.mining_efficiency",
-          "amount": 0.25,
+          "attribute": "minecraft:generic.attack_speed",
+          "amount": 0.01,
           "operation": "add_value"
         }
       ]

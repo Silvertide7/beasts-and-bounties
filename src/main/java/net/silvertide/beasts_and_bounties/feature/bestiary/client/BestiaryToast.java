@@ -5,12 +5,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.components.toasts.ToastComponent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 
 public final class BestiaryToast implements Toast {
-    private static final ResourceLocation BACKGROUND_SPRITE = BeastsAndBountiesMod.id("bestiary/toast");
-    private static final ResourceLocation ICON_SPRITE = BeastsAndBountiesMod.id("bestiary/icon_overview");
+    private static final Sprite BACKGROUND_SPRITE = Sprite.of("toast", 160, 32);
+    private static final Sprite ICON_SPRITE = Sprite.of("icon_overview", 16, 16);
     private static final long DISPLAY_MILLIS = 5000L;
     private static final int ICON_X = 8;
     private static final int ICON_Y = 8;
@@ -49,8 +47,8 @@ public final class BestiaryToast implements Toast {
             shownSinceMillis = timeSinceLastVisible;
             restartTimer = false;
         }
-        graphics.blitSprite(BACKGROUND_SPRITE, 0, 0, width(), height());
-        graphics.blitSprite(ICON_SPRITE, ICON_X, ICON_Y, ICON_SIZE, ICON_SIZE);
+        BACKGROUND_SPRITE.draw(graphics, 0, 0, width(), height());
+        ICON_SPRITE.draw(graphics, ICON_X, ICON_Y, ICON_SIZE, ICON_SIZE);
         graphics.drawString(toasts.getMinecraft().font, title, TEXT_X, TITLE_Y, TITLE_COLOR, false);
         graphics.drawString(toasts.getMinecraft().font, message, TEXT_X, MESSAGE_Y, MESSAGE_COLOR, false);
         double displayMillis = DISPLAY_MILLIS * toasts.getNotificationDisplayTimeMultiplier();

@@ -3,9 +3,7 @@ package net.silvertide.beasts_and_bounties.feature.bestiary;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.util.ExtraCodecs;
 
 public record Progress(int kills, int bounties) {
@@ -16,10 +14,15 @@ public record Progress(int kills, int bounties) {
             ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("bounties", 0).forGetter(Progress::bounties)
     ).apply(instance, Progress::new));
     public static final Codec<Progress> CODEC = MAP_CODEC.codec();
-    public static final StreamCodec<ByteBuf, Progress> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT, Progress::kills,
-            ByteBufCodecs.VAR_INT, Progress::bounties,
-            Progress::new);
+
+    public void write(FriendlyByteBuf buf) {
+        buf.writeVarInt(kills);
+        buf.writeVarInt(bounties);
+    }
+
+    public static Progress read(FriendlyByteBuf buf) {
+        return new Progress(buf.readVarInt(), buf.readVarInt());
+    }
 
     public boolean meets(Progress requirement) {
         return kills >= requirement.kills && bounties >= requirement.bounties;

@@ -1,6 +1,5 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -17,7 +16,6 @@ public final class BountyBoardData extends SavedData {
     private static final String PERIOD = "period";
     private static final String PERIOD_REROLLS = "period_rerolls";
     private static final String OFFERS = "offers";
-    private static final Factory<BountyBoardData> FACTORY = new Factory<>(BountyBoardData::new, BountyBoardData::load);
 
     private int rerolls;
     private long period = -1;
@@ -26,17 +24,17 @@ public final class BountyBoardData extends SavedData {
 
     private BountyBoardData() {}
 
-    private static BountyBoardData load(CompoundTag tag, HolderLookup.Provider registries) {
+    private static BountyBoardData load(CompoundTag tag) {
         BountyBoardData data = new BountyBoardData();
         data.rerolls = tag.getInt(REROLLS);
         data.period = tag.getLong(PERIOD);
         data.periodRerolls = tag.getInt(PERIOD_REROLLS);
-        data.offers = tag.getList(OFFERS, Tag.TAG_STRING).stream().map(entry -> ResourceLocation.parse(entry.getAsString())).toList();
+        data.offers = tag.getList(OFFERS, Tag.TAG_STRING).stream().map(entry -> new ResourceLocation(entry.getAsString())).toList();
         return data;
     }
 
-    static BountyBoardData of(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(FACTORY, BeastsAndBountiesMod.MODID + "_board");
+    public static BountyBoardData of(MinecraftServer server) {
+        return server.overworld().getDataStorage().computeIfAbsent(BountyBoardData::load, BountyBoardData::new, BeastsAndBountiesMod.MODID + "_board");
     }
 
     public int rerolls() {
@@ -64,7 +62,7 @@ public final class BountyBoardData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save(CompoundTag tag) {
         tag.putInt(REROLLS, rerolls);
         tag.putLong(PERIOD, period);
         tag.putInt(PERIOD_REROLLS, periodRerolls);

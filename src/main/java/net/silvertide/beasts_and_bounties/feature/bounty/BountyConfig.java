@@ -1,23 +1,23 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
 import net.minecraft.SharedConstants;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 public final class BountyConfig {
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec SPEC;
 
-    private static final ModConfigSpec.DoubleValue REFRESH_MINECRAFT_DAYS;
-    static final ModConfigSpec.IntValue OFFERS_SHOWN;
-    private static final ModConfigSpec.IntValue CLAIM_COOLDOWN_MINUTES;
-    private static final ModConfigSpec.IntValue ABANDON_COOLDOWN_MINUTES;
-    public static final ModConfigSpec.BooleanValue ALLOW_ABANDON;
-    private static final ModConfigSpec.BooleanValue SHOW_LAST_SEEN;
+    private static final ForgeConfigSpec.DoubleValue REFRESH_MINECRAFT_DAYS;
+    static final ForgeConfigSpec.IntValue OFFERS_SHOWN;
+    private static final ForgeConfigSpec.IntValue CLAIM_COOLDOWN_MINUTES;
+    private static final ForgeConfigSpec.IntValue ABANDON_COOLDOWN_MINUTES;
+    public static final ForgeConfigSpec.BooleanValue ALLOW_ABANDON;
+    private static final ForgeConfigSpec.BooleanValue SHOW_LAST_SEEN;
 
     private static final int TICKS_PER_MINECRAFT_DAY = 24000;
     private static final int SECONDS_PER_MINUTE = 60;
 
     static {
-        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         builder.comment("The bounty board: per-player postings that refresh on a timer.").push("board");
         REFRESH_MINECRAFT_DAYS = builder.comment("How often the postings change, in Minecraft days (1.0 = one day/night cycle).")
                 .defineInRange("refreshMinecraftDays", 1.0, 0.05, 100.0);

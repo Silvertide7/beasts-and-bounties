@@ -158,7 +158,7 @@
         {
           "type": "attribute",
           "attribute": "minecraft:generic.max_health",
-          "amount": 2.0,
+          "amount": 3.0,
           "operation": "add_value"
         }
       ]
@@ -218,7 +218,7 @@
         {
           "type": "attribute",
           "attribute": "minecraft:generic.max_health",
-          "amount": 2.0,
+          "amount": 3.0,
           "operation": "add_value"
         }
       ]

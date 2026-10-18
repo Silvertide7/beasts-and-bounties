@@ -2,9 +2,7 @@ package net.silvertide.beasts_and_bounties.feature.bounty;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
@@ -16,11 +14,16 @@ public record BountyState(Optional<ActiveBounty> active, long cooldownEndsAt) {
                 Codec.INT.fieldOf("kills_required").forGetter(ActiveBounty::killsRequired),
                 Codec.INT.optionalFieldOf("kills_so_far", 0).forGetter(ActiveBounty::killsSoFar)
         ).apply(instance, ActiveBounty::new));
-        static final StreamCodec<ByteBuf, ActiveBounty> STREAM_CODEC = StreamCodec.composite(
-                ResourceLocation.STREAM_CODEC, ActiveBounty::entityId,
-                ByteBufCodecs.VAR_INT, ActiveBounty::killsRequired,
-                ByteBufCodecs.VAR_INT, ActiveBounty::killsSoFar,
-                ActiveBounty::new);
+
+        void write(FriendlyByteBuf buf) {
+            buf.writeResourceLocation(entityId);
+            buf.writeVarInt(killsRequired);
+            buf.writeVarInt(killsSoFar);
+        }
+
+        static ActiveBounty read(FriendlyByteBuf buf) {
+            return new ActiveBounty(buf.readResourceLocation(), buf.readVarInt(), buf.readVarInt());
+        }
 
         public boolean isComplete() {
             return killsSoFar >= killsRequired;
@@ -31,11 +34,16 @@ public record BountyState(Optional<ActiveBounty> active, long cooldownEndsAt) {
             ActiveBounty.CODEC.optionalFieldOf("active").forGetter(BountyState::active),
             Codec.LONG.optionalFieldOf("cooldown_ends_at", 0L).forGetter(BountyState::cooldownEndsAt)
     ).apply(instance, BountyState::new));
-    public static final StreamCodec<ByteBuf, BountyState> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.optional(ActiveBounty.STREAM_CODEC), BountyState::active,
-            ByteBufCodecs.VAR_LONG, BountyState::cooldownEndsAt,
-            BountyState::new);
     public static final BountyState NONE = new BountyState(Optional.empty(), 0);
+
+    public void write(FriendlyByteBuf buf) {
+        buf.writeOptional(active, (out, bounty) -> bounty.write(out));
+        buf.writeVarLong(cooldownEndsAt);
+    }
+
+    public static BountyState read(FriendlyByteBuf buf) {
+        return new BountyState(buf.readOptional(ActiveBounty::read), buf.readVarLong());
+    }
 
     public boolean canAccept(long now) {
         return active.isEmpty() && now >= cooldownEndsAt;

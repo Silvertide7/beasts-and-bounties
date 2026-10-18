@@ -256,8 +256,8 @@
         },
         {
           "type": "attribute",
-          "attribute": "minecraft:generic.safe_fall_distance",
-          "amount": 0.25,
+          "attribute": "minecraft:generic.max_health",
+          "amount": 0.5,
           "operation": "add_value"
         }
       ]

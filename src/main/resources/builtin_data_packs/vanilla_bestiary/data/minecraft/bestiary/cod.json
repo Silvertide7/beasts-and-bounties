@@ -256,8 +256,8 @@
         },
         {
           "type": "attribute",
-          "attribute": "minecraft:generic.oxygen_bonus",
-          "amount": 0.2,
+          "attribute": "forge:swim_speed",
+          "amount": 0.02,
           "operation": "add_value"
         }
       ]

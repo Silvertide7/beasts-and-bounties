@@ -1,81 +1,81 @@
 package net.silvertide.beasts_and_bounties.feature.bestiary;
 
+import com.google.gson.JsonParser;
 import com.mojang.serialization.Codec;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import com.mojang.serialization.JsonOps;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
+import net.silvertide.beasts_and_bounties.core.Network;
 import net.silvertide.beasts_and_bounties.feature.bestiary.client.ClientBestiary;
 
-import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class BestiaryPayloads {
     private BestiaryPayloads() {}
 
-    static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToClient(Entries.TYPE, Entries.STREAM_CODEC, (payload, context) -> ClientBestiary.receiveEntries(payload.entries(), payload.first()));
-        registrar.playToClient(AllProgress.TYPE, AllProgress.STREAM_CODEC, (payload, context) -> ClientBestiary.setProgress(payload.progress()));
-        registrar.playToClient(ProgressUpdate.TYPE, ProgressUpdate.STREAM_CODEC, (payload, context) -> ClientBestiary.updateProgress(payload.entityId(), payload.progress()));
+    static void register() {
+        Network.toClient(Entries.class, Entries::encode, Entries::decode, payload -> ClientBestiary.receiveEntries(payload.entries(), payload.first()));
+        Network.toClient(AllProgress.class, AllProgress::encode, AllProgress::decode, payload -> ClientBestiary.setProgress(payload.progress()));
+        Network.toClient(ProgressUpdate.class, ProgressUpdate::encode, ProgressUpdate::decode, payload -> ClientBestiary.updateProgress(payload.entityId(), payload.progress()));
     }
 
-    public record Entries(Map<ResourceLocation, BestiaryEntry> entries, boolean first) implements CustomPacketPayload {
-        static final Type<Entries> TYPE = new Type<>(BeastsAndBountiesMod.id("entries"));
-        static final StreamCodec<RegistryFriendlyByteBuf, Entries> STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.fromCodecWithRegistries(Codec.unboundedMap(ResourceLocation.CODEC, BestiaryEntry.CODEC)), Entries::entries,
-                ByteBufCodecs.BOOL, Entries::first,
-                Entries::new);
-        public static final int ENTRIES_PER_PAYLOAD = 8;
+    public record Entries(Map<ResourceLocation, BestiaryEntry> entries, boolean first) {
+        private static final Codec<Map<ResourceLocation, BestiaryEntry>> CODEC = Codec.unboundedMap(ResourceLocation.CODEC, BestiaryEntry.CODEC);
+        private static final int MAX_CHUNK_JSON_CHARS = 200_000;
 
         public static List<Entries> chunked(Map<ResourceLocation, BestiaryEntry> all) {
             List<Entries> chunks = new ArrayList<>();
             Map<ResourceLocation, BestiaryEntry> chunk = new HashMap<>();
+            int chunkChars = 0;
             for (Map.Entry<ResourceLocation, BestiaryEntry> entry : all.entrySet()) {
-                chunk.put(entry.getKey(), entry.getValue());
-                if (chunk.size() == ENTRIES_PER_PAYLOAD) {
+                int entryChars = BestiaryEntry.CODEC.encodeStart(JsonOps.INSTANCE, entry.getValue()).result().map(json -> json.toString().length()).orElse(0);
+                if (!chunk.isEmpty() && chunkChars + entryChars > MAX_CHUNK_JSON_CHARS) {
                     chunks.add(new Entries(Map.copyOf(chunk), chunks.isEmpty()));
                     chunk.clear();
+                    chunkChars = 0;
                 }
+                chunk.put(entry.getKey(), entry.getValue());
+                chunkChars += entryChars;
             }
-            if (!chunk.isEmpty() || chunks.isEmpty()) chunks.add(new Entries(Map.copyOf(chunk), chunks.isEmpty()));
+            chunks.add(new Entries(Map.copyOf(chunk), chunks.isEmpty()));
             return chunks;
         }
 
-        @Override
-        public Type<Entries> type() {
-            return TYPE;
+        void encode(FriendlyByteBuf buf) {
+            String json = CODEC.encodeStart(JsonOps.INSTANCE, entries).getOrThrow(false, error -> {}).toString();
+            buf.writeByteArray(json.getBytes(StandardCharsets.UTF_8));
+            buf.writeBoolean(first);
+        }
+
+        static Entries decode(FriendlyByteBuf buf) {
+            String json = new String(buf.readByteArray(), StandardCharsets.UTF_8);
+            Map<ResourceLocation, BestiaryEntry> entries = CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json)).getOrThrow(false, error -> {});
+            return new Entries(entries, buf.readBoolean());
         }
     }
 
-    public record AllProgress(Map<ResourceLocation, Progress> progress) implements CustomPacketPayload {
-        static final Type<AllProgress> TYPE = new Type<>(BeastsAndBountiesMod.id("all_progress"));
-        static final StreamCodec<RegistryFriendlyByteBuf, AllProgress> STREAM_CODEC =
-                ByteBufCodecs.<RegistryFriendlyByteBuf, ResourceLocation, Progress, Map<ResourceLocation, Progress>>map(HashMap::new, ResourceLocation.STREAM_CODEC, Progress.STREAM_CODEC)
-                        .map(AllProgress::new, AllProgress::progress);
+    public record AllProgress(Map<ResourceLocation, Progress> progress) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeMap(progress, FriendlyByteBuf::writeResourceLocation, (out, value) -> value.write(out));
+        }
 
-        @Override
-        public Type<AllProgress> type() {
-            return TYPE;
+        static AllProgress decode(FriendlyByteBuf buf) {
+            return new AllProgress(buf.readMap(FriendlyByteBuf::readResourceLocation, Progress::read));
         }
     }
 
-    public record ProgressUpdate(ResourceLocation entityId, Progress progress) implements CustomPacketPayload {
-        static final Type<ProgressUpdate> TYPE = new Type<>(BeastsAndBountiesMod.id("progress_update"));
-        static final StreamCodec<RegistryFriendlyByteBuf, ProgressUpdate> STREAM_CODEC = StreamCodec.composite(
-                ResourceLocation.STREAM_CODEC, ProgressUpdate::entityId,
-                Progress.STREAM_CODEC, ProgressUpdate::progress,
-                ProgressUpdate::new);
+    public record ProgressUpdate(ResourceLocation entityId, Progress progress) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeResourceLocation(entityId);
+            progress.write(buf);
+        }
 
-        @Override
-        public Type<ProgressUpdate> type() {
-            return TYPE;
+        static ProgressUpdate decode(FriendlyByteBuf buf) {
+            return new ProgressUpdate(buf.readResourceLocation(), Progress.read(buf));
         }
     }
 }

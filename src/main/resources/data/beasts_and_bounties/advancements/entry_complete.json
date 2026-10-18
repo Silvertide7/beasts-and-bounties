@@ -1,0 +1,22 @@
+{
+  "parent": "beasts_and_bounties:root",
+  "display": {
+    "icon": {
+      "item": "minecraft:writable_book"
+    },
+    "title": {
+      "translate": "advancements.beasts_and_bounties.entry_complete.title"
+    },
+    "description": {
+      "translate": "advancements.beasts_and_bounties.entry_complete.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "entry_complete": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

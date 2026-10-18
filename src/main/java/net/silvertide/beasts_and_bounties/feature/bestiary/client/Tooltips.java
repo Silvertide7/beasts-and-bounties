@@ -4,13 +4,12 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 
 import java.util.List;
 
 public final class Tooltips {
-    private static final ResourceLocation SPRITE = BeastsAndBountiesMod.id("bestiary/tooltip");
+    private static final Sprite SPRITE = Sprite.of("tooltip", 16, 16);
+    private static final int BORDER = 3;
     private static final int PADDING = 4;
     private static final int CURSOR_OFFSET = 12;
     private static final int Z = 400;
@@ -29,7 +28,7 @@ public final class Tooltips {
         graphics.pose().translate(0, 0, Z);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        graphics.blitSprite(SPRITE, textX - PADDING, textY - PADDING, width + PADDING * 2, height + PADDING * 2);
+        SPRITE.drawNineSliced(graphics, textX - PADDING, textY - PADDING, width + PADDING * 2, height + PADDING * 2, BORDER);
         RenderSystem.disableBlend();
         for (int i = 0; i < lines.size(); i++) graphics.drawString(font, lines.get(i), textX, textY + i * LINE_HEIGHT, TEXT_COLOR, true);
         graphics.pose().popPose();

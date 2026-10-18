@@ -306,7 +306,7 @@
         },
         {
           "type": "attribute",
-          "attribute": "minecraft:player.block_interaction_range",
+          "attribute": "forge:block_reach",
           "amount": 0.1,
           "operation": "add_value"
         }

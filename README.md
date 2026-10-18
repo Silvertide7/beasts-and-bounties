@@ -1,6 +1,6 @@
 # Beasts & Bounties
 
-A NeoForge mod for Minecraft 1.21.1 that adds a **Hunter's Bestiary**: a book that fills in as you
+A Forge mod for Minecraft 1.20.1 that adds a **Hunter's Bestiary**: a book that fills in as you
 hunt. Every creature has a data-driven entry made of milestones. Reaching one reveals more about the
 creature (name, 3D model, stats, how it fights, strengths, weaknesses, where it dwells) and grants
 permanent bonuses: more damage against it, less damage taken from it, extra loot rolls, bonus
@@ -30,8 +30,7 @@ experience, a small attribute boon, and the ability to track it.
 
 ## Requirements
 
-- NeoForge 21.1.249+ for Minecraft 1.21.1.
-- [SilverLib](https://www.curseforge.com/minecraft/mc-mods/silverlib) 1.2.2+.
+- Forge 47+ for Minecraft 1.20.1.
 
 ## Building
 

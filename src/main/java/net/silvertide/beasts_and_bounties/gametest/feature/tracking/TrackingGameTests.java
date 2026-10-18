@@ -1,10 +1,9 @@
-package net.silvertide.beasts_and_bounties.feature.tracking;
+package net.silvertide.beasts_and_bounties.gametest.feature.tracking;
 
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.nbt.CompoundTag;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryProgress;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
@@ -12,9 +11,18 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
+import net.silvertide.beasts_and_bounties.gametest.MockPlayers;
+import net.silvertide.beasts_and_bounties.feature.tracking.ActiveTrackingLevel;
+import net.silvertide.beasts_and_bounties.feature.tracking.PassiveTrackingLevel;
+import net.silvertide.beasts_and_bounties.feature.tracking.PlayerTracking;
+import net.silvertide.beasts_and_bounties.feature.tracking.TrackingDirection;
+import net.silvertide.beasts_and_bounties.feature.tracking.TrackingHeight;
+import net.silvertide.beasts_and_bounties.feature.tracking.TrackingPayloads;
+import net.silvertide.beasts_and_bounties.feature.tracking.TrackingScanner;
+import net.silvertide.beasts_and_bounties.feature.tracking.TrackingState;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntries;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntry;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Bonuses;
@@ -80,9 +88,8 @@ public class TrackingGameTests {
     }
 
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void scansFindTheNearestAndGlowByLevel(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = MockPlayers.inLevel(helper);
         Vec3 origin = player.position();
         player.setYRot(0);
         helper.getLevel().getEntities(EntityType.ZOMBIE, player.getBoundingBox().inflate(80), zombie -> true).forEach(Zombie::discard);
@@ -116,9 +123,8 @@ public class TrackingGameTests {
     }
 
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void trackingNeedsAnUnlockAndCleansUpAfterItself(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = MockPlayers.inLevel(helper);
         ResourceLocation skeleton = EntityType.getKey(EntityType.SKELETON);
         PlayerTracking.track(player, skeleton);
         helper.assertTrue(PlayerTracking.state(player).isEmpty(), "tracking a creature with nothing unlocked is refused");
@@ -128,27 +134,26 @@ public class TrackingGameTests {
         helper.assertTrue(PlayerTracking.state(player).flatMap(TrackingState::creature).equals(Optional.of(skeleton)), "tracking starts once unlocked");
 
         BestiaryProgress.all(player).clear();
-        helper.onEachTick(() -> NeoForge.EVENT_BUS.post(new PlayerTickEvent.Post(player)));
+        helper.onEachTick(() -> MinecraftForge.EVENT_BUS.post(new TickEvent.PlayerTickEvent(TickEvent.Phase.END, player)));
         helper.runAfterDelay(25, () -> {
             helper.assertTrue(PlayerTracking.state(player).isEmpty(), "tracking stops within a second once the unlock is gone");
             long now = helper.getLevel().getGameTime();
-            player.setData(PlayerTracking.STATE, new TrackingState(Optional.empty(), 0, now + 2));
+            PlayerTracking.setState(player, new TrackingState(Optional.empty(), 0, now + 2));
             helper.succeedWhen(() -> helper.assertTrue(PlayerTracking.state(player).isEmpty(), "an expired cooldown copy is removed"));
         });
     }
 
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void trackingStateSurvivesSavingAndDeath(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = MockPlayers.inLevel(helper);
         TrackingState state = new TrackingState(Optional.of(ZOMBIE), 100, 2700);
-        player.setData(PlayerTracking.STATE, state);
+        PlayerTracking.setState(player, state);
         CompoundTag saved = player.saveWithoutId(new CompoundTag());
-        ServerPlayer loaded = helper.makeMockServerPlayerInLevel();
+        ServerPlayer loaded = MockPlayers.inLevel(helper);
         loaded.load(saved);
         helper.assertTrue(PlayerTracking.state(loaded).equals(Optional.of(state)), "tracking state round-trips through NBT");
-        ServerPlayer respawned = helper.makeMockServerPlayerInLevel();
-        NeoForge.EVENT_BUS.post(new PlayerEvent.Clone(respawned, player, true));
+        ServerPlayer respawned = MockPlayers.inLevel(helper);
+        respawned.restoreFrom(player, false);
         helper.assertTrue(PlayerTracking.state(respawned).equals(Optional.of(state)), "tracking state is copied on death");
         helper.succeed();
     }

@@ -3,7 +3,7 @@ package net.silvertide.beasts_and_bounties.feature.bestiary;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 public final class BestiaryEntry {
     public static final Codec<BestiaryEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Classification.CODEC.optionalFieldOf("classification", Classification.NORMAL).forGetter(BestiaryEntry::classification),
-            Codec.list(Milestone.CODEC, 1, Integer.MAX_VALUE).fieldOf("milestones").forGetter(BestiaryEntry::milestones)
+            Milestone.CODEC.listOf().fieldOf("milestones").forGetter(BestiaryEntry::milestones)
     ).apply(instance, BestiaryEntry::new));
 
     private static final int NO_MILESTONE = -1;
@@ -44,15 +44,12 @@ public final class BestiaryEntry {
             Milestone milestone = this.milestones.get(i);
             knowledge = knowledge.merge(milestone.knowledge());
             for (Reward reward : milestone.rewards()) {
-                switch (reward) {
-                    case Reward.DamageBonus bonus -> damageBonus += bonus.amount();
-                    case Reward.DamageResistance resistance -> damageResistance += resistance.amount();
-                    case Reward.ExtraLoot extraLoot -> extraLootChance += extraLoot.chance();
-                    case Reward.BonusExperience experience -> bonusExperience += experience.amount();
-                    case Reward.PassiveTracking tracking -> passiveTracking = Math.max(passiveTracking, tracking.level());
-                    case Reward.ActiveTracking tracking -> activeTracking = Math.max(activeTracking, tracking.level());
-                    case Reward.AttributeBonus ignored -> {}
-                }
+                if (reward instanceof Reward.DamageBonus bonus) damageBonus += bonus.amount();
+                else if (reward instanceof Reward.DamageResistance resistance) damageResistance += resistance.amount();
+                else if (reward instanceof Reward.ExtraLoot extraLoot) extraLootChance += extraLoot.chance();
+                else if (reward instanceof Reward.BonusExperience experience) bonusExperience += experience.amount();
+                else if (reward instanceof Reward.PassiveTracking tracking) passiveTracking = Math.max(passiveTracking, tracking.level());
+                else if (reward instanceof Reward.ActiveTracking tracking) activeTracking = Math.max(activeTracking, tracking.level());
             }
             knowledgeAtMilestone[i] = knowledge;
             bonusesAtMilestone[i] = Bonuses.fromTotals(damageBonus, damageResistance, extraLootChance, bonusExperience, passiveTracking, activeTracking);
@@ -83,7 +80,7 @@ public final class BestiaryEntry {
     }
 
     public Component displayName(ResourceLocation entityId, Progress progress) {
-        return knowledge(progress).name() ? BuiltInRegistries.ENTITY_TYPE.get(entityId).getDescription() : UNKNOWN_NAME;
+        return knowledge(progress).name() ? ForgeRegistries.ENTITY_TYPES.getValue(entityId).getDescription() : UNKNOWN_NAME;
     }
 
     public Knowledge fullKnowledge() {

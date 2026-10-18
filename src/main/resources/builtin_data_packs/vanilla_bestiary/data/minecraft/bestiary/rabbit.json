@@ -262,7 +262,7 @@
         },
         {
           "type": "attribute",
-          "attribute": "minecraft:generic.jump_strength",
+          "attribute": "minecraft:generic.movement_speed",
           "amount": 0.01,
           "operation": "add_multiplied_base"
         }

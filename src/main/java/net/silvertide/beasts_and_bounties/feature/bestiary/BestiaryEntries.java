@@ -3,10 +3,11 @@ package net.silvertide.beasts_and_bounties.feature.bestiary;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.RegistryAccess;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
@@ -16,6 +17,7 @@ import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.EntityType;
+import net.silvertide.beasts_and_bounties.core.StrictCodecs;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -34,19 +36,19 @@ public final class BestiaryEntries extends SimplePreparableReloadListener<Map<Re
     private static Map<ResourceLocation, BestiaryEntry> entriesById = Map.of();
     private static Map<EntityType<?>, BestiaryEntry> entriesByType = Map.of();
 
-    record PackFile(String packId, JsonElement json) {}
+    public record PackFile(String packId, JsonElement json) {}
 
     private record EntryFile(boolean replace, Optional<Classification> classification, List<Milestone> milestones) {
         static final Codec<EntryFile> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.BOOL.optionalFieldOf("replace", false).forGetter(EntryFile::replace),
-                Classification.CODEC.optionalFieldOf("classification").forGetter(EntryFile::classification),
-                Milestone.CODEC.listOf().optionalFieldOf("milestones", List.of()).forGetter(EntryFile::milestones)
+                StrictCodecs.optionalField("classification", Classification.CODEC).forGetter(EntryFile::classification),
+                StrictCodecs.optionalField("milestones", Milestone.CODEC.listOf(), List.of()).forGetter(EntryFile::milestones)
         ).apply(instance, EntryFile::new));
     }
 
-    private final HolderLookup.Provider registries;
+    private final RegistryAccess registries;
 
-    BestiaryEntries(HolderLookup.Provider registries) {
+    BestiaryEntries(RegistryAccess registries) {
         this.registries = registries;
     }
 
@@ -83,19 +85,19 @@ public final class BestiaryEntries extends SimplePreparableReloadListener<Map<Re
 
     @Override
     protected void apply(Map<ResourceLocation, List<PackFile>> filesByEntity, ResourceManager resourceManager, ProfilerFiller profiler) {
-        RegistryOps<JsonElement> ops = registries.createSerializationContext(JsonOps.INSTANCE);
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registries);
         Map<ResourceLocation, BestiaryEntry> loadedById = new HashMap<>();
         Map<EntityType<?>, BestiaryEntry> loadedByType = new HashMap<>();
         filesByEntity.forEach((entityId, packFiles) -> {
-            Optional<EntityType<?>> entityType = BuiltInRegistries.ENTITY_TYPE.getOptional(entityId);
-            if (entityType.isEmpty()) {
+            EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.containsKey(entityId) ? ForgeRegistries.ENTITY_TYPES.getValue(entityId) : null;
+            if (entityType == null) {
                 LOGGER.warn("Skipping bestiary entry {}: no such entity", entityId);
                 return;
             }
             BestiaryEntry entry = mergeInPackOrder(entityId, packFiles, ops);
             if (entry == null) return;
             loadedById.put(entityId, entry);
-            loadedByType.put(entityType.get(), entry);
+            loadedByType.put(entityType, entry);
         });
         entriesById = Map.copyOf(loadedById);
         entriesByType = Map.copyOf(loadedByType);
@@ -103,13 +105,16 @@ public final class BestiaryEntries extends SimplePreparableReloadListener<Map<Re
     }
 
     @Nullable
-    static BestiaryEntry mergeInPackOrder(ResourceLocation entityId, List<PackFile> packFiles, RegistryOps<JsonElement> ops) {
+    public static BestiaryEntry mergeInPackOrder(ResourceLocation entityId, List<PackFile> packFiles, RegistryOps<JsonElement> ops) {
         Classification classification = Classification.NORMAL;
         List<Milestone> milestones = new ArrayList<>();
         for (PackFile packFile : packFiles) {
-            Optional<EntryFile> parsed = EntryFile.CODEC.parse(ops, packFile.json())
-                    .ifError(error -> LOGGER.warn("Skipping bestiary entry {} from pack {}: {}", entityId, packFile.packId(), error.message()))
-                    .result();
+            DataResult<EntryFile> result = EntryFile.CODEC.parse(ops, packFile.json());
+            if (result.error().isPresent()) {
+                LOGGER.warn("Skipping bestiary entry {} from pack {}: {}", entityId, packFile.packId(), result.error().get().message());
+                continue;
+            }
+            Optional<EntryFile> parsed = result.result();
             if (parsed.isEmpty()) continue;
             if (parsed.get().replace()) {
                 classification = Classification.NORMAL;

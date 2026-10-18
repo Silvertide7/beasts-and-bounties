@@ -297,7 +297,7 @@
         },
         {
           "type": "attribute",
-          "attribute": "minecraft:player.submerged_mining_speed",
+          "attribute": "forge:swim_speed",
           "amount": 0.02,
           "operation": "add_multiplied_base"
         }

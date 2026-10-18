@@ -1,7 +1,7 @@
 package net.silvertide.beasts_and_bounties.feature.tracking;
 
 import net.minecraft.SharedConstants;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -9,39 +9,43 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.OnDatapackSyncEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.event.OnDatapackSyncEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
-import net.silvertide.beasts_and_bounties.core.Payloads;
+import net.silvertide.beasts_and_bounties.core.Network;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryProgress;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Bonuses;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
-@EventBusSubscriber(modid = BeastsAndBountiesMod.MODID)
+@Mod.EventBusSubscriber(modid = BeastsAndBountiesMod.MODID)
 public final class TrackingScanner {
+    private static final Map<UUID, TrackingPayloads.HuntUpdate> LAST_HUNT_UPDATES = new HashMap<>();
+
     private TrackingScanner() {}
 
     @SubscribeEvent
-    static void syncOnJoin(OnDatapackSyncEvent event) {
+    public static void syncOnJoin(OnDatapackSyncEvent event) {
         if (event.getPlayer() != null) PlayerTracking.sync(event.getPlayer());
     }
 
     @SubscribeEvent
-    static void keepLastHuntUpdateAcrossDeath(PlayerEvent.Clone event) {
-        TrackingPayloads.HuntUpdate last = event.getOriginal().getExistingDataOrNull(PlayerTracking.LAST_HUNT_UPDATE);
-        if (last != null) event.getEntity().setData(PlayerTracking.LAST_HUNT_UPDATE, last);
+    public static void forgetLastHuntUpdateOnLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        LAST_HUNT_UPDATES.remove(event.getEntity().getUUID());
     }
 
     @SubscribeEvent
-    static void scan(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        TrackingState state = player.getExistingDataOrNull(PlayerTracking.STATE);
+    public static void scan(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) return;
+        TrackingState state = PlayerTracking.state(player).orElse(null);
         if (state == null) return;
         long now = player.level().getGameTime();
         if (state.creature().isEmpty()) {
@@ -64,7 +68,7 @@ public final class TrackingScanner {
         if (bonuses.passiveTracking() == 0) return;
         PassiveTrackingLevel passive = PassiveTrackingLevel.of(bonuses.passiveTracking());
         if (isScanTick(now, player, passive.pingIntervalTicks()))
-            passivePing(player, creature, passive).ifPresent(ping -> Payloads.sendIfConnected(player, ping));
+            passivePing(player, creature, passive).ifPresent(ping -> Network.sendIfConnected(player, ping));
     }
 
     static void scanHunt(ServerPlayer player) {
@@ -74,7 +78,7 @@ public final class TrackingScanner {
         });
     }
 
-    static Optional<TrackingPayloads.PassivePing> passivePing(Player player, ResourceLocation creature, PassiveTrackingLevel level) {
+    public static Optional<TrackingPayloads.PassivePing> passivePing(Player player, ResourceLocation creature, PassiveTrackingLevel level) {
         return nearbySortedByDistance(player, creature, level.range()).stream().findFirst().map(nearest -> {
             TrackingDirection direction = TrackingDirection.fromRelativeYaw(
                     TrackingDirection.yawTowards(player.getX(), player.getZ(), nearest.getX(), nearest.getZ()) - player.getYRot(),
@@ -86,10 +90,10 @@ public final class TrackingScanner {
         });
     }
 
-    static TrackingPayloads.HuntUpdate hunt(Player player, ResourceLocation creature, ActiveTrackingLevel level) {
+    public static TrackingPayloads.HuntUpdate hunt(Player player, ResourceLocation creature, ActiveTrackingLevel level) {
         List<LivingEntity> nearby = nearbySortedByDistance(player, creature, level.arrowRange());
         if (nearby.isEmpty()) return TrackingPayloads.HuntUpdate.NONE;
-        LivingEntity nearest = nearby.getFirst();
+        LivingEntity nearest = nearby.get(0);
         double glowRangeSquared = (double) ActiveTrackingLevel.glowRange() * ActiveTrackingLevel.glowRange();
         List<Integer> glowIds = switch (level.glow()) {
             case NONE -> List.of();
@@ -99,13 +103,13 @@ public final class TrackingScanner {
         return new TrackingPayloads.HuntUpdate(Optional.of(new TrackingPayloads.HuntTarget(nearest.getId(), nearest.position())), glowIds);
     }
 
-    static int roundedDistance(double distance) {
+    public static int roundedDistance(double distance) {
         int rounding = TrackingConfig.DISTANCE_ROUNDING_BLOCKS.get();
         return Math.max(rounding, (int) Math.round(distance / rounding) * rounding);
     }
 
     private static List<LivingEntity> nearbySortedByDistance(Player player, ResourceLocation creature, int range) {
-        return nearbyOfType(player, BuiltInRegistries.ENTITY_TYPE.get(creature), range);
+        return nearbyOfType(player, ForgeRegistries.ENTITY_TYPES.getValue(creature), range);
     }
 
     private static <T extends Entity> List<LivingEntity> nearbyOfType(Player player, EntityType<T> type, int range) {
@@ -119,13 +123,17 @@ public final class TrackingScanner {
     }
 
     private static void endHunt(ServerPlayer player) {
-        if (player.getData(PlayerTracking.LAST_HUNT_UPDATE) != TrackingPayloads.HuntUpdate.NONE) sendIfChanged(player, TrackingPayloads.HuntUpdate.NONE);
+        if (lastHuntUpdate(player) != TrackingPayloads.HuntUpdate.NONE) sendIfChanged(player, TrackingPayloads.HuntUpdate.NONE);
+    }
+
+    private static TrackingPayloads.HuntUpdate lastHuntUpdate(ServerPlayer player) {
+        return LAST_HUNT_UPDATES.getOrDefault(player.getUUID(), TrackingPayloads.HuntUpdate.NONE);
     }
 
     private static void sendIfChanged(ServerPlayer player, TrackingPayloads.HuntUpdate update) {
-        if (player.getData(PlayerTracking.LAST_HUNT_UPDATE).needsNoResendFor(update)) return;
-        player.setData(PlayerTracking.LAST_HUNT_UPDATE, update);
-        Payloads.sendIfConnected(player, update);
+        if (lastHuntUpdate(player).needsNoResendFor(update)) return;
+        LAST_HUNT_UPDATES.put(player.getUUID(), update);
+        Network.sendIfConnected(player, update);
     }
 
     private static boolean isScanTick(long now, Player player, int interval) {

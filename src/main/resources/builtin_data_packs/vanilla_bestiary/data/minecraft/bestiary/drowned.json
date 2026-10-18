@@ -307,7 +307,7 @@
         },
         {
           "type": "attribute",
-          "attribute": "minecraft:generic.water_movement_efficiency",
+          "attribute": "forge:swim_speed",
           "amount": 0.02,
           "operation": "add_value"
         }

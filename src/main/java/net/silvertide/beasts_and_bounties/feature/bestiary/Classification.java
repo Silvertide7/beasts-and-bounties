@@ -2,9 +2,7 @@ package net.silvertide.beasts_and_bounties.feature.bestiary;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.ChatFormatting;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 
 import java.util.Optional;
 
@@ -28,8 +26,8 @@ public enum Classification implements StringRepresentable {
         return nameColor;
     }
 
-    public Optional<ResourceLocation> iconSprite() {
-        return this == NORMAL ? Optional.empty() : Optional.of(BeastsAndBountiesMod.id("bestiary/classification_" + serializedName));
+    public Optional<String> iconName() {
+        return this == NORMAL ? Optional.empty() : Optional.of("classification_" + serializedName);
     }
 
     @Override

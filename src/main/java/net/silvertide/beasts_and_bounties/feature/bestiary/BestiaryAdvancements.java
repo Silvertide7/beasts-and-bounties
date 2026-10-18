@@ -1,6 +1,6 @@
 package net.silvertide.beasts_and_bounties.feature.bestiary;
 
-import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.Advancement;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
@@ -28,8 +28,8 @@ final class BestiaryAdvancements {
     }
 
     private static void award(ServerPlayer player, ResourceLocation id) {
-        AdvancementHolder advancement = player.server.getAdvancements().get(id);
+        Advancement advancement = player.server.getAdvancements().getAdvancement(id);
         if (advancement == null) return;
-        advancement.value().criteria().keySet().forEach(criterion -> player.getAdvancements().award(advancement, criterion));
+        advancement.getCriteria().keySet().forEach(criterion -> player.getAdvancements().award(advancement, criterion));
     }
 }

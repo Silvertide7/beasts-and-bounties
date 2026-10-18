@@ -1,0 +1,22 @@
+{
+  "display": {
+    "icon": {
+      "item": "beasts_and_bounties:bestiary"
+    },
+    "title": {
+      "translate": "advancements.beasts_and_bounties.root.title"
+    },
+    "description": {
+      "translate": "advancements.beasts_and_bounties.root.description"
+    },
+    "background": "beasts_and_bounties:textures/gui/advancements/bestiary.png",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "first_entry": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

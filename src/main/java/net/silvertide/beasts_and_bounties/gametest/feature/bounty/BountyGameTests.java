@@ -1,4 +1,4 @@
-package net.silvertide.beasts_and_bounties.feature.bounty;
+package net.silvertide.beasts_and_bounties.gametest.feature.bounty;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -14,11 +14,18 @@ import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
+import net.silvertide.beasts_and_bounties.gametest.MockPlayers;
+import net.silvertide.beasts_and_bounties.feature.bounty.BountyBoardData;
+import net.silvertide.beasts_and_bounties.feature.bounty.BountyDefinition;
+import net.silvertide.beasts_and_bounties.feature.bounty.BountyDefinitions;
+import net.silvertide.beasts_and_bounties.feature.bounty.BountyOffers;
+import net.silvertide.beasts_and_bounties.feature.bounty.BountyReward;
+import net.silvertide.beasts_and_bounties.feature.bounty.BountyState;
+import net.silvertide.beasts_and_bounties.feature.bounty.PlayerBounties;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntries;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryProgress;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Progress;
@@ -32,14 +39,14 @@ import java.util.Optional;
 @PrefixGameTestTemplate(false)
 public class BountyGameTests {
     private static final ResourceLocation ZOMBIE = EntityType.getKey(EntityType.ZOMBIE);
-    private static final int SHIPPED_BOUNTIES = 38;
+    private static final int SHIPPED_BOUNTIES = 36;
 
     @GameTest(template = "empty")
     public static void everyShippedBountyMatchesAnEntry(GameTestHelper helper) {
         helper.assertTrue(BountyDefinitions.all().size() == SHIPPED_BOUNTIES, "expected " + SHIPPED_BOUNTIES + " bounties, loaded " + BountyDefinitions.all().size());
         BountyDefinitions.all().keySet().forEach(entityId -> helper.assertTrue(BestiaryEntries.get(entityId) != null, entityId + " has a bounty but no entry"));
         BountyDefinition zombie = BountyDefinitions.all().get(ZOMBIE);
-        helper.assertTrue(zombie.kills() == 8 && zombie.bonusKills() == 10 && zombie.experienceReward() == 100 && zombie.itemRewards().getFirst().is(Items.IRON_INGOT) && zombie.itemRewards().getFirst().getCount() == 12, "zombie bounty values");
+        helper.assertTrue(zombie.kills() == 8 && zombie.bonusKills() == 10 && zombie.experienceReward() == 100 && zombie.itemRewards().get(0).is(Items.IRON_INGOT) && zombie.itemRewards().get(0).getCount() == 12, "zombie bounty values");
         helper.succeed();
     }
 
@@ -48,9 +55,9 @@ public class BountyGameTests {
         JsonObject json = GsonHelper.parse("""
                 {"rewards": [{"type": "pmmo_xp", "xp": "combat/50"}, {"type": "experience", "amount": 10}]}
                 """);
-        BountyDefinition definition = BountyDefinition.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+        BountyDefinition definition = BountyDefinition.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow(false, error -> {});
         List<BountyReward.SkillExperience> skills = definition.skillExperienceRewards();
-        helper.assertTrue(skills.size() == 1 && skills.getFirst().skill().equals("combat") && skills.getFirst().amount() == 50, "pmmo_xp parses skill/amount");
+        helper.assertTrue(skills.size() == 1 && skills.get(0).skill().equals("combat") && skills.get(0).amount() == 50, "pmmo_xp parses skill/amount");
         helper.assertTrue(definition.experienceReward() == 10 && definition.itemRewards().isEmpty(), "other rewards unaffected");
         helper.succeed();
     }
@@ -71,17 +78,16 @@ public class BountyGameTests {
         Set<ResourceLocation> firstIds = first.stream().map(BountyOffers.Offer::entityId).collect(Collectors.toSet());
         List<BountyOffers.Offer> next = BountyOffers.pick(42, 2, 0, 3, BountyDefinitions.all(), firstIds);
         helper.assertTrue(next.stream().noneMatch(offer -> firstIds.contains(offer.entityId())), "the next board never repeats the previous one");
-        ServerPlayer one = helper.makeMockServerPlayerInLevel();
-        ServerPlayer two = helper.makeMockServerPlayerInLevel();
+        ServerPlayer one = MockPlayers.inLevel(helper);
+        ServerPlayer two = MockPlayers.inLevel(helper);
         long now = helper.getLevel().getGameTime();
         helper.assertTrue(BountyOffers.current(one.server, now).equals(BountyOffers.current(two.server, now)), "the board is shared by every player");
         helper.succeed();
     }
 
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void acceptingValidatesOffersActiveBountyAndCooldown(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = MockPlayers.inLevel(helper);
         long now = helper.getLevel().getGameTime();
         List<BountyOffers.Offer> offers = BountyOffers.current(player.server, now);
         ResourceLocation unoffered = BountyDefinitions.all().keySet().stream()
@@ -89,10 +95,10 @@ public class BountyGameTests {
         PlayerBounties.accept(player, unoffered);
         helper.assertTrue(PlayerBounties.state(player).active().isEmpty(), "an unoffered bounty is refused");
 
-        ResourceLocation offered = offers.getFirst().entityId();
+        ResourceLocation offered = offers.get(0).entityId();
         PlayerBounties.accept(player, offered);
         BountyState.ActiveBounty active = PlayerBounties.state(player).active().orElseThrow();
-        helper.assertTrue(active.entityId().equals(offered) && active.killsRequired() == offers.getFirst().definition().kills() && active.killsSoFar() == 0, "accepting an offered bounty starts it");
+        helper.assertTrue(active.entityId().equals(offered) && active.killsRequired() == offers.get(0).definition().kills() && active.killsSoFar() == 0, "accepting an offered bounty starts it");
         PlayerBounties.accept(player, offers.get(1).entityId());
         helper.assertTrue(PlayerBounties.state(player).active().orElseThrow().entityId().equals(offered), "a second bounty is refused while one is active");
 
@@ -105,12 +111,11 @@ public class BountyGameTests {
     }
 
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void boardCommandsRerollAndClear(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = MockPlayers.inLevel(helper);
         long now = helper.getLevel().getGameTime();
         List<BountyOffers.Offer> before = BountyOffers.current(player.server, now);
-        PlayerBounties.accept(player, before.getFirst().entityId());
+        PlayerBounties.accept(player, before.get(0).entityId());
         PlayerBounties.abandon(player);
         helper.assertTrue(!PlayerBounties.state(player).canAccept(now), "abandoning leaves a cooldown");
 
@@ -130,10 +135,9 @@ public class BountyGameTests {
     }
 
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void killsAdvanceAndCompleteABounty(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setData(PlayerBounties.STATE, BountyState.NONE.accepted(ZOMBIE, 2));
+        ServerPlayer player = MockPlayers.inLevel(helper);
+        PlayerBounties.setState(player, BountyState.NONE.accepted(ZOMBIE, 2));
         DamageSources sources = helper.getLevel().damageSources();
         killZombie(helper, player, sources);
         helper.assertTrue(PlayerBounties.state(player).active().orElseThrow().killsSoFar() == 1, "the first kill advances the bounty");
@@ -148,17 +152,16 @@ public class BountyGameTests {
     }
 
     @GameTest(template = "empty")
-    @SuppressWarnings("removal")
     public static void bountyStateSurvivesSavingAndDeath(GameTestHelper helper) {
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        ServerPlayer player = MockPlayers.inLevel(helper);
         BountyState state = new BountyState(Optional.of(new BountyState.ActiveBounty(ZOMBIE, 5, 2)), 900);
-        player.setData(PlayerBounties.STATE, state);
+        PlayerBounties.setState(player, state);
         CompoundTag saved = player.saveWithoutId(new CompoundTag());
-        ServerPlayer loaded = helper.makeMockServerPlayerInLevel();
+        ServerPlayer loaded = MockPlayers.inLevel(helper);
         loaded.load(saved);
         helper.assertTrue(PlayerBounties.state(loaded).equals(state), "bounty state round-trips through NBT");
-        ServerPlayer respawned = helper.makeMockServerPlayerInLevel();
-        NeoForge.EVENT_BUS.post(new PlayerEvent.Clone(respawned, player, true));
+        ServerPlayer respawned = MockPlayers.inLevel(helper);
+        respawned.restoreFrom(player, false);
         helper.assertTrue(PlayerBounties.state(respawned).equals(state), "bounty state is copied on death");
         helper.succeed();
     }

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "L",
+    "B",
+    "N"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "B": {
+      "item": "minecraft:book"
+    },
+    "N": {
+      "item": "minecraft:bone"
+    }
+  },
+  "result": {
+    "item": "beasts_and_bounties:bestiary",
+    "count": 1
+  }
+}

@@ -1,18 +1,10 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
-import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
+import net.silvertide.beasts_and_bounties.core.Network;
 import net.silvertide.beasts_and_bounties.feature.bounty.client.ClientBounties;
 
 import java.util.List;
@@ -20,78 +12,78 @@ import java.util.List;
 public final class BountyPayloads {
     private BountyPayloads() {}
 
-    static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToServer(AcceptBounty.TYPE, AcceptBounty.STREAM_CODEC, (payload, context) -> PlayerBounties.accept((ServerPlayer) context.player(), payload.entityId()));
-        registrar.playToServer(AbandonBounty.TYPE, AbandonBounty.STREAM_CODEC, (payload, context) -> PlayerBounties.abandon((ServerPlayer) context.player()));
-        registrar.playToClient(BoardOpened.TYPE, BoardOpened.STREAM_CODEC, (payload, context) -> ClientBounties.openBoard(payload));
-        registrar.playToClient(StateSync.TYPE, StateSync.STREAM_CODEC, (payload, context) -> ClientBounties.setState(payload.state()));
-        registrar.playToClient(BountyClaimed.TYPE, BountyClaimed.STREAM_CODEC, (payload, context) -> ClientBounties.claimed(payload.entityId()));
+    static void register() {
+        Network.toServer(AcceptBounty.class, AcceptBounty::encode, AcceptBounty::decode, (payload, player) -> PlayerBounties.accept(player, payload.entityId()));
+        Network.toServer(AbandonBounty.class, AbandonBounty::encode, AbandonBounty::decode, (payload, player) -> PlayerBounties.abandon(player));
+        Network.toClient(BoardOpened.class, BoardOpened::encode, BoardOpened::decode, payload -> ClientBounties.openBoard(payload));
+        Network.toClient(StateSync.class, StateSync::encode, StateSync::decode, payload -> ClientBounties.setState(payload.state()));
+        Network.toClient(BountyClaimed.class, BountyClaimed::encode, BountyClaimed::decode, payload -> ClientBounties.claimed(payload.entityId()));
     }
 
     public record Offer(ResourceLocation entityId, int kills, List<ItemStack> items, int experience, List<Component> skillExperience, List<Component> habitat) {
-        static final StreamCodec<RegistryFriendlyByteBuf, Offer> STREAM_CODEC = StreamCodec.composite(
-                ResourceLocation.STREAM_CODEC, Offer::entityId,
-                ByteBufCodecs.VAR_INT, Offer::kills,
-                ItemStack.OPTIONAL_STREAM_CODEC.apply(ByteBufCodecs.list()), Offer::items,
-                ByteBufCodecs.VAR_INT, Offer::experience,
-                ComponentSerialization.STREAM_CODEC.apply(ByteBufCodecs.list()), Offer::skillExperience,
-                ComponentSerialization.STREAM_CODEC.apply(ByteBufCodecs.list()), Offer::habitat,
-                Offer::new);
-    }
+        void write(FriendlyByteBuf buf) {
+            buf.writeResourceLocation(entityId);
+            buf.writeVarInt(kills);
+            buf.writeCollection(items, FriendlyByteBuf::writeItem);
+            buf.writeVarInt(experience);
+            buf.writeCollection(skillExperience, FriendlyByteBuf::writeComponent);
+            buf.writeCollection(habitat, FriendlyByteBuf::writeComponent);
+        }
 
-    public record BoardOpened(List<Offer> offers, long periodEndsAt, BountyState state, boolean refreshOnly) implements CustomPacketPayload {
-        static final Type<BoardOpened> TYPE = new Type<>(BeastsAndBountiesMod.id("board_opened"));
-        static final StreamCodec<RegistryFriendlyByteBuf, BoardOpened> STREAM_CODEC = StreamCodec.composite(
-                Offer.STREAM_CODEC.apply(ByteBufCodecs.list()), BoardOpened::offers,
-                ByteBufCodecs.VAR_LONG, BoardOpened::periodEndsAt,
-                BountyState.STREAM_CODEC, BoardOpened::state,
-                ByteBufCodecs.BOOL, BoardOpened::refreshOnly,
-                BoardOpened::new);
-
-        @Override
-        public Type<BoardOpened> type() {
-            return TYPE;
+        static Offer read(FriendlyByteBuf buf) {
+            return new Offer(buf.readResourceLocation(), buf.readVarInt(), buf.readList(FriendlyByteBuf::readItem), buf.readVarInt(),
+                    buf.readList(FriendlyByteBuf::readComponent), buf.readList(FriendlyByteBuf::readComponent));
         }
     }
 
-    public record StateSync(BountyState state) implements CustomPacketPayload {
-        static final Type<StateSync> TYPE = new Type<>(BeastsAndBountiesMod.id("bounty_state"));
-        static final StreamCodec<ByteBuf, StateSync> STREAM_CODEC = BountyState.STREAM_CODEC.map(StateSync::new, StateSync::state);
+    public record BoardOpened(List<Offer> offers, long periodEndsAt, BountyState state, boolean refreshOnly) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeCollection(offers, (out, offer) -> offer.write(out));
+            buf.writeVarLong(periodEndsAt);
+            state.write(buf);
+            buf.writeBoolean(refreshOnly);
+        }
 
-        @Override
-        public Type<StateSync> type() {
-            return TYPE;
+        static BoardOpened decode(FriendlyByteBuf buf) {
+            return new BoardOpened(buf.readList(Offer::read), buf.readVarLong(), BountyState.read(buf), buf.readBoolean());
         }
     }
 
-    public record BountyClaimed(ResourceLocation entityId) implements CustomPacketPayload {
-        static final Type<BountyClaimed> TYPE = new Type<>(BeastsAndBountiesMod.id("bounty_claimed"));
-        static final StreamCodec<ByteBuf, BountyClaimed> STREAM_CODEC = ResourceLocation.STREAM_CODEC.map(BountyClaimed::new, BountyClaimed::entityId);
+    public record StateSync(BountyState state) {
+        void encode(FriendlyByteBuf buf) {
+            state.write(buf);
+        }
 
-        @Override
-        public Type<BountyClaimed> type() {
-            return TYPE;
+        static StateSync decode(FriendlyByteBuf buf) {
+            return new StateSync(BountyState.read(buf));
         }
     }
 
-    public record AcceptBounty(ResourceLocation entityId) implements CustomPacketPayload {
-        static final Type<AcceptBounty> TYPE = new Type<>(BeastsAndBountiesMod.id("accept_bounty"));
-        static final StreamCodec<ByteBuf, AcceptBounty> STREAM_CODEC = ResourceLocation.STREAM_CODEC.map(AcceptBounty::new, AcceptBounty::entityId);
+    public record BountyClaimed(ResourceLocation entityId) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeResourceLocation(entityId);
+        }
 
-        @Override
-        public Type<AcceptBounty> type() {
-            return TYPE;
+        static BountyClaimed decode(FriendlyByteBuf buf) {
+            return new BountyClaimed(buf.readResourceLocation());
         }
     }
 
-    public record AbandonBounty() implements CustomPacketPayload {
-        static final Type<AbandonBounty> TYPE = new Type<>(BeastsAndBountiesMod.id("abandon_bounty"));
-        static final StreamCodec<ByteBuf, AbandonBounty> STREAM_CODEC = StreamCodec.unit(new AbandonBounty());
+    public record AcceptBounty(ResourceLocation entityId) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeResourceLocation(entityId);
+        }
 
-        @Override
-        public Type<AbandonBounty> type() {
-            return TYPE;
+        static AcceptBounty decode(FriendlyByteBuf buf) {
+            return new AcceptBounty(buf.readResourceLocation());
+        }
+    }
+
+    public record AbandonBounty() {
+        void encode(FriendlyByteBuf buf) {}
+
+        static AbandonBounty decode(FriendlyByteBuf buf) {
+            return new AbandonBounty();
         }
     }
 }

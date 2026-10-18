@@ -7,10 +7,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -19,7 +17,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.item.ItemStack;
 import net.silvertide.beasts_and_bounties.BeastsAndBountiesMod;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntry;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Bonuses;
@@ -32,11 +30,10 @@ import net.silvertide.beasts_and_bounties.feature.bounty.client.ClientBounties;
 import net.silvertide.beasts_and_bounties.feature.tracking.client.ClientTracking;
 import net.silvertide.beasts_and_bounties.feature.tracking.client.TrackingClientEvents;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -61,16 +58,17 @@ public final class BestiaryScreen extends Screen {
     private static final int LINE_HEIGHT = 10;
     private static final int GLYPH_HEIGHT = 8;
 
-    private static final ResourceLocation CLEAR_SEARCH_SPRITE = BeastsAndBountiesMod.id("bestiary/clear_search");
-    private static final ResourceLocation CLEAR_SEARCH_HIGHLIGHTED_SPRITE = BeastsAndBountiesMod.id("bestiary/clear_search_highlighted");
+    private static final Sprite CLEAR_SEARCH_SPRITE = Sprite.of("clear_search", 14, 14);
+    private static final Sprite CLEAR_SEARCH_HIGHLIGHTED_SPRITE = Sprite.of("clear_search_highlighted", 14, 14);
     private static final int CLEAR_SEARCH_SIZE = 7;
     private static final int CLEAR_SEARCH_GAP = 2;
 
-    private static final ResourceLocation TRACK_BUTTON_SPRITE = BeastsAndBountiesMod.id("bestiary/track_button");
-    private static final ResourceLocation TRACK_BUTTON_HIGHLIGHTED_SPRITE = BeastsAndBountiesMod.id("bestiary/track_button_highlighted");
-    private static final ResourceLocation TRACKED_EYE_SPRITE = BeastsAndBountiesMod.id("bestiary/tracked_eye");
-    private static final ResourceLocation BOUNTY_MARK_SPRITE = BeastsAndBountiesMod.id("bestiary/bounty_mark");
-    private static final ResourceLocation TRACKED_BOUNTY_MARK_SPRITE = BeastsAndBountiesMod.id("bestiary/tracked_bounty_mark");
+    private static final Sprite TRACK_BUTTON_SPRITE = Sprite.of("track_button", 200, 20);
+    private static final Sprite TRACK_BUTTON_HIGHLIGHTED_SPRITE = Sprite.of("track_button_highlighted", 200, 20);
+    private static final int TRACK_BUTTON_BORDER = 3;
+    private static final Sprite TRACKED_EYE_SPRITE = Sprite.of("tracked_eye", 9, 9);
+    private static final Sprite BOUNTY_MARK_SPRITE = Sprite.of("bounty_mark", 9, 9);
+    private static final Sprite TRACKED_BOUNTY_MARK_SPRITE = Sprite.of("tracked_bounty_mark", 9, 9);
     private static final int BOUNTY_ROW_COLOR = 0x40C04020;
     private static final int TRACKED_ROW_COLOR = 0x402060C0;
     private static final int TRACK_BUTTON_HEIGHT = 20;
@@ -84,6 +82,12 @@ public final class BestiaryScreen extends Screen {
     private static final int ROW_HEIGHT = 11;
     private static final int ROWS_PER_PAGE = LIST_AREA.height() / ROW_HEIGHT;
     private static final int ICON_SIZE = 8;
+    private static final Map<Classification, Sprite> CLASSIFICATION_ICONS = new EnumMap<>(Classification.class);
+
+    static {
+        for (Classification classification : Classification.values())
+            classification.iconName().ifPresent(name -> CLASSIFICATION_ICONS.put(classification, Sprite.of(name, ICON_SIZE, ICON_SIZE)));
+    }
     private static final int ICON_GAP = 2;
     private static final int SELECTED_ROW_COLOR = 0x40000000;
     private static final int HOVERED_ROW_COLOR = 0x20000000;
@@ -115,19 +119,19 @@ public final class BestiaryScreen extends Screen {
         TRACKING("tracking");
 
         private final Component title;
-        private final ResourceLocation iconSprite;
+        private final Sprite iconSprite;
 
         Tab(String name) {
             this.title = Component.translatable("gui.beasts_and_bounties.tab." + name);
-            this.iconSprite = BeastsAndBountiesMod.id("bestiary/icon_" + name);
+            this.iconSprite = Sprite.of("icon_" + name, TAB_ICON_SIZE, TAB_ICON_SIZE);
         }
     }
 
     private enum TabShape {
         LEFT, MIDDLE, RIGHT;
 
-        private final ResourceLocation sprite = BeastsAndBountiesMod.id("bestiary/tab_" + name().toLowerCase(Locale.ROOT));
-        private final ResourceLocation selectedSprite = BeastsAndBountiesMod.id("bestiary/tab_" + name().toLowerCase(Locale.ROOT) + "_selected");
+        private final Sprite sprite = Sprite.of("tab_" + name().toLowerCase(Locale.ROOT), TAB_WIDTH, TAB_HEIGHT);
+        private final Sprite selectedSprite = Sprite.of("tab_" + name().toLowerCase(Locale.ROOT) + "_selected", TAB_WIDTH, TAB_HEIGHT);
 
         static TabShape at(int index, int count) {
             return index == 0 ? LEFT : index == count - 1 ? RIGHT : MIDDLE;
@@ -153,10 +157,10 @@ public final class BestiaryScreen extends Screen {
     private record Row(ResourceLocation entityId, BestiaryEntry entry, Progress progress, Component name, FormattedCharSequence nameLine, String searchableName) {}
 
     private static final int ROW_NAME_WIDTH = LIST_AREA.width() - ICON_SIZE - ICON_GAP - TRACKED_EYE_SIZE - ICON_GAP;
-    private static final ResourceLocation PAGE_FORWARD_SPRITE = BeastsAndBountiesMod.id("bestiary/page_forward");
-    private static final ResourceLocation PAGE_FORWARD_HIGHLIGHTED_SPRITE = BeastsAndBountiesMod.id("bestiary/page_forward_highlighted");
-    private static final ResourceLocation PAGE_BACKWARD_SPRITE = BeastsAndBountiesMod.id("bestiary/page_backward");
-    private static final ResourceLocation PAGE_BACKWARD_HIGHLIGHTED_SPRITE = BeastsAndBountiesMod.id("bestiary/page_backward_highlighted");
+    private static final Sprite PAGE_FORWARD_SPRITE = Sprite.of("page_forward", ARROW_WIDTH, ARROW_HEIGHT);
+    private static final Sprite PAGE_FORWARD_HIGHLIGHTED_SPRITE = Sprite.of("page_forward_highlighted", ARROW_WIDTH, ARROW_HEIGHT);
+    private static final Sprite PAGE_BACKWARD_SPRITE = Sprite.of("page_backward", ARROW_WIDTH, ARROW_HEIGHT);
+    private static final Sprite PAGE_BACKWARD_HIGHLIGHTED_SPRITE = Sprite.of("page_backward_highlighted", ARROW_WIDTH, ARROW_HEIGHT);
 
     private final List<Row> discoveredRows = new ArrayList<>();
     private final List<Row> filteredRows = new ArrayList<>();
@@ -201,7 +205,6 @@ public final class BestiaryScreen extends Screen {
                 Component.translatable("gui.beasts_and_bounties.search"));
         searchBox.setBordered(false);
         searchBox.setTextColor(TEXT_COLOR);
-        searchBox.setTextShadow(false);
         searchBox.setHint(Component.translatable("gui.beasts_and_bounties.search").withStyle(ChatFormatting.DARK_GRAY));
         searchBox.setValue(previousQuery);
         searchBox.setResponder(query -> applySearch());
@@ -221,7 +224,7 @@ public final class BestiaryScreen extends Screen {
             if (!entry.isDiscovered(progress)) return;
             Component name = ClientBestiary.displayName(entityId, entry, progress);
             String searchableName = entry.knowledge(progress).name() ? name.getString().toLowerCase(Locale.ROOT) : "";
-            discoveredRows.add(new Row(entityId, entry, progress, name, font.split(name, ROW_NAME_WIDTH).getFirst(), searchableName));
+            discoveredRows.add(new Row(entityId, entry, progress, name, font.split(name, ROW_NAME_WIDTH).get(0), searchableName));
         });
         ResourceLocation bountied = ClientBounties.activeBountyCreature().orElse(null);
         ResourceLocation tracked = ClientTracking.trackedCreature().orElse(null);
@@ -243,7 +246,7 @@ public final class BestiaryScreen extends Screen {
         listPage = Math.min(listPage, listPageCount() - 1);
         ResourceLocation selectedId = selectedRow == null ? null : selectedRow.entityId();
         select(filteredRows.stream().filter(row -> row.entityId().equals(selectedId)).findFirst()
-                .orElse(filteredRows.isEmpty() ? null : filteredRows.getFirst()));
+                .orElse(filteredRows.isEmpty() ? null : filteredRows.get(0)));
     }
 
     private void select(@Nullable Row row) {
@@ -298,7 +301,7 @@ public final class BestiaryScreen extends Screen {
         trackButtonShown = selectedRow.entry().bonuses(selectedRow.progress()).hasTracking();
         trackButtonLabel = Component.translatable(isSelectedTracked() ? "gui.beasts_and_bounties.stop_tracking" : "gui.beasts_and_bounties.track");
         trackButtonWidth = font.width(trackButtonLabel) + TRACK_BUTTON_PADDING * 2;
-        headerNameLine = font.split(selectedRow.name(), HEADER_AREA.width() - ICON_SIZE - ICON_GAP).getFirst();
+        headerNameLine = font.split(selectedRow.name(), HEADER_AREA.width() - ICON_SIZE - ICON_GAP).get(0);
     }
 
     private void buildTracking(Bonuses bonuses) {
@@ -360,7 +363,7 @@ public final class BestiaryScreen extends Screen {
         addPercentReward(againstThisCreature, "extra_loot", bonuses.extraLootChance());
         addPercentReward(againstThisCreature, "bonus_experience", bonuses.experienceMultiplier() - 1);
 
-        Map<Holder<Attribute>, Map<AttributeModifier.Operation, Double>> attributeTotals = new LinkedHashMap<>();
+        Map<Attribute, Map<AttributeModifier.Operation, Double>> attributeTotals = new LinkedHashMap<>();
         for (Reward reward : rewards) {
             if (reward instanceof Reward.AttributeBonus bonus)
                 attributeTotals.computeIfAbsent(bonus.attribute(), attribute -> new LinkedHashMap<>()).merge(bonus.operation(), bonus.amount(), Double::sum);
@@ -376,7 +379,7 @@ public final class BestiaryScreen extends Screen {
     private Component againstHeading() {
         if (!selectedRow.entry().knowledge(selectedRow.progress()).name())
             return Component.translatable("gui.beasts_and_bounties.rewards.against.unknown");
-        return Component.translatable("gui.beasts_and_bounties.rewards.against", BuiltInRegistries.ENTITY_TYPE.get(selectedRow.entityId()).getDescription());
+        return Component.translatable("gui.beasts_and_bounties.rewards.against", ForgeRegistries.ENTITY_TYPES.getValue(selectedRow.entityId()).getDescription());
     }
 
     private void addRewardSection(Component heading, Component hint, List<Component> lines) {
@@ -391,7 +394,7 @@ public final class BestiaryScreen extends Screen {
         if (fraction == 0) return;
         String direction = fraction > 0 ? "more" : "less";
         lines.add(Component.translatable("gui.beasts_and_bounties.reward." + reward + "." + direction,
-                        ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format(Math.abs(fraction) * 100))
+                        ItemStack.ATTRIBUTE_MODIFIER_FORMAT.format(Math.abs(fraction) * 100))
                 .withStyle(fraction > 0 ? ChatFormatting.DARK_GREEN : ChatFormatting.DARK_RED));
     }
 
@@ -408,7 +411,7 @@ public final class BestiaryScreen extends Screen {
 
     private static Component formatStat(Either<Double, Tier> value) {
         return value.map(
-                number -> Component.literal(ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format(number)),
+                number -> Component.literal(ItemStack.ATTRIBUTE_MODIFIER_FORMAT.format(number)),
                 tier -> Component.translatable("tier.beasts_and_bounties." + tier.getSerializedName()).withStyle(tier.color()));
     }
 
@@ -424,24 +427,24 @@ public final class BestiaryScreen extends Screen {
         return Component.translatable("gui.beasts_and_bounties.requirement." + counter + (count == 1 ? ".one" : ""), count);
     }
 
-    private static Component formatAttributeBonus(Holder<Attribute> attribute, AttributeModifier.Operation operation, double amount) {
-        double displayedAmount = operation == AttributeModifier.Operation.ADD_VALUE ? amount : amount * 100;
+    private static Component formatAttributeBonus(Attribute attribute, AttributeModifier.Operation operation, double amount) {
+        double displayedAmount = operation == AttributeModifier.Operation.ADDITION ? amount : amount * 100;
         String sign = amount >= 0 ? "plus" : "take";
-        return Component.translatable("attribute.modifier." + sign + "." + operation.id(),
-                        ItemAttributeModifiers.ATTRIBUTE_MODIFIER_FORMAT.format(Math.abs(displayedAmount)),
-                        Component.translatable(attribute.value().getDescriptionId()))
+        return Component.translatable("attribute.modifier." + sign + "." + operation.toValue(),
+                        ItemStack.ATTRIBUTE_MODIFIER_FORMAT.format(Math.abs(displayedAmount)),
+                        Component.translatable(attribute.getDescriptionId()))
                 .withStyle(amount >= 0 ? ChatFormatting.DARK_GREEN : ChatFormatting.DARK_RED);
     }
 
     @Nullable
     private static LivingEntity createDisplayEntity(ResourceLocation entityId) {
-        Entity entity = BuiltInRegistries.ENTITY_TYPE.get(entityId).create(Minecraft.getInstance().level);
+        Entity entity = ForgeRegistries.ENTITY_TYPES.getValue(entityId).create(Minecraft.getInstance().level);
         return entity instanceof LivingEntity living ? living : null;
     }
 
     @Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderTransparentBackground(graphics);
+    public void renderBackground(GuiGraphics graphics) {
+        super.renderBackground(graphics);
         renderTabs(graphics, false);
         graphics.blit(SPREAD_TEXTURE, left, top, SPREAD_WIDTH, SPREAD_HEIGHT, 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT, TEXTURE_WIDTH, TEXTURE_HEIGHT);
         renderTabs(graphics, true);
@@ -449,6 +452,7 @@ public final class BestiaryScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderEntryList(graphics, mouseX, mouseY);
         renderPage(graphics, mouseX, mouseY);
@@ -462,8 +466,8 @@ public final class BestiaryScreen extends Screen {
             if (selected != selectedPass) continue;
             int tabX = tabX(i);
             int tabY = tabY(selected);
-            graphics.blitSprite(selected ? slot.shape().selectedSprite : slot.shape().sprite, tabX, tabY, TAB_WIDTH, TAB_HEIGHT);
-            graphics.blitSprite(slot.tab().iconSprite, tabX + TAB_ICON_INSET_X, tabY + TAB_ICON_INSET_Y, TAB_ICON_SIZE, TAB_ICON_SIZE);
+            (selected ? slot.shape().selectedSprite : slot.shape().sprite).draw(graphics, tabX, tabY);
+            slot.tab().iconSprite.draw(graphics, tabX + TAB_ICON_INSET_X, tabY + TAB_ICON_INSET_Y);
         }
     }
 
@@ -489,8 +493,8 @@ public final class BestiaryScreen extends Screen {
             if (row == selectedRow) graphics.fill(x - 1, rowY, x + LIST_AREA.width(), rowY + ROW_HEIGHT, SELECTED_ROW_COLOR);
             else if (row == hovered) graphics.fill(x - 1, rowY, x + LIST_AREA.width(), rowY + ROW_HEIGHT, HOVERED_ROW_COLOR);
             renderNameWithIcon(graphics, row.entry().classification(), row.nameLine(), x, rowY + 2);
-            if (bountied || tracked) graphics.blitSprite(bountied && tracked ? TRACKED_BOUNTY_MARK_SPRITE : bountied ? BOUNTY_MARK_SPRITE : TRACKED_EYE_SPRITE,
-                    x + LIST_AREA.width() - TRACKED_EYE_SIZE, rowY + (ROW_HEIGHT - TRACKED_EYE_SIZE) / 2, TRACKED_EYE_SIZE, TRACKED_EYE_SIZE);
+            if (bountied || tracked) (bountied && tracked ? TRACKED_BOUNTY_MARK_SPRITE : bountied ? BOUNTY_MARK_SPRITE : TRACKED_EYE_SPRITE)
+                    .draw(graphics, x + LIST_AREA.width() - TRACKED_EYE_SIZE, rowY + (ROW_HEIGHT - TRACKED_EYE_SIZE) / 2);
         }
         renderClearSearchButton(graphics, mouseX, mouseY);
         renderPageTurning(graphics, LIST_FOOTER_AREA, listPage, listPageCount(), mouseX, mouseY);
@@ -498,8 +502,8 @@ public final class BestiaryScreen extends Screen {
 
     private void renderClearSearchButton(GuiGraphics graphics, int mouseX, int mouseY) {
         if (searchBox.getValue().isEmpty()) return;
-        ResourceLocation sprite = isOverClearSearch(mouseX, mouseY) ? CLEAR_SEARCH_HIGHLIGHTED_SPRITE : CLEAR_SEARCH_SPRITE;
-        graphics.blitSprite(sprite, clearSearchX(), clearSearchY(), CLEAR_SEARCH_SIZE, CLEAR_SEARCH_SIZE);
+        Sprite sprite = isOverClearSearch(mouseX, mouseY) ? CLEAR_SEARCH_HIGHLIGHTED_SPRITE : CLEAR_SEARCH_SPRITE;
+        sprite.draw(graphics, clearSearchX(), clearSearchY(), CLEAR_SEARCH_SIZE, CLEAR_SEARCH_SIZE);
     }
 
     private boolean isOverClearSearch(double mouseX, double mouseY) {
@@ -533,8 +537,8 @@ public final class BestiaryScreen extends Screen {
     }
 
     private void renderTrackButton(GuiGraphics graphics, int mouseX, int mouseY) {
-        ResourceLocation sprite = isOverTrackButton(mouseX, mouseY) ? TRACK_BUTTON_HIGHLIGHTED_SPRITE : TRACK_BUTTON_SPRITE;
-        graphics.blitSprite(sprite, trackButtonX(), trackButtonY(), trackButtonWidth, TRACK_BUTTON_HEIGHT);
+        Sprite sprite = isOverTrackButton(mouseX, mouseY) ? TRACK_BUTTON_HIGHLIGHTED_SPRITE : TRACK_BUTTON_SPRITE;
+        sprite.drawNineSliced(graphics, trackButtonX(), trackButtonY(), trackButtonWidth, TRACK_BUTTON_HEIGHT, TRACK_BUTTON_BORDER);
         graphics.drawString(font, trackButtonLabel, trackButtonX() + TRACK_BUTTON_PADDING,
                 trackButtonY() + (TRACK_BUTTON_HEIGHT - GLYPH_HEIGHT) / 2, TRACK_BUTTON_TEXT_COLOR, true);
     }
@@ -550,14 +554,15 @@ public final class BestiaryScreen extends Screen {
 
     private void renderArrow(GuiGraphics graphics, Area footer, boolean forward, int mouseX, int mouseY) {
         boolean highlighted = isOverArrow(mouseX, mouseY, footer, forward);
-        ResourceLocation sprite = forward
+        Sprite sprite = forward
                 ? (highlighted ? PAGE_FORWARD_HIGHLIGHTED_SPRITE : PAGE_FORWARD_SPRITE)
                 : (highlighted ? PAGE_BACKWARD_HIGHLIGHTED_SPRITE : PAGE_BACKWARD_SPRITE);
-        graphics.blitSprite(sprite, arrowX(footer, forward), top + footer.y(), ARROW_WIDTH, ARROW_HEIGHT);
+        sprite.draw(graphics, arrowX(footer, forward), top + footer.y());
     }
 
     private void renderNameWithIcon(GuiGraphics graphics, Classification classification, FormattedCharSequence nameLine, int x, int y) {
-        classification.iconSprite().ifPresent(sprite -> graphics.blitSprite(sprite, x, y, ICON_SIZE, ICON_SIZE));
+        Sprite icon = CLASSIFICATION_ICONS.get(classification);
+        if (icon != null) icon.draw(graphics, x, y);
         graphics.drawString(font, nameLine, x + ICON_SIZE + ICON_GAP, y, TEXT_COLOR, false);
     }
 
@@ -598,11 +603,11 @@ public final class BestiaryScreen extends Screen {
     }
 
     private int contentPageCount() {
-        return Math.max(1, Math.ceilDiv(pageLines.size(), linesPerContentPage()));
+        return Math.max(1, (pageLines.size() + linesPerContentPage() - 1) / linesPerContentPage());
     }
 
     private int listPageCount() {
-        return Math.max(1, Math.ceilDiv(filteredRows.size(), ROWS_PER_PAGE));
+        return Math.max(1, (filteredRows.size() + ROWS_PER_PAGE - 1) / ROWS_PER_PAGE);
     }
 
     private void renderModel(GuiGraphics graphics, int x, int y) {
@@ -626,8 +631,7 @@ public final class BestiaryScreen extends Screen {
         float largestDimension = Math.max(displayedEntity.getBbWidth(), displayedEntity.getBbHeight());
         float pixelsPerBlock = MODEL_BOX_HEIGHT * MODEL_FILL_FRACTION / largestDimension;
         graphics.enableScissor(x, y, x + CONTENT_AREA.width(), y + MODEL_BOX_HEIGHT);
-        InventoryScreen.renderEntityInInventory(graphics, centerX, centerY, pixelsPerBlock,
-                new Vector3f(0, displayedEntity.getBbHeight() / 2, 0), new Quaternionf().rotateZ((float) Math.PI), null, displayedEntity);
+        EntityPreview.render(graphics, centerX, centerY, pixelsPerBlock, displayedEntity, graphics.bufferSource());
         graphics.disableScissor();
     }
 

@@ -34,18 +34,18 @@ public final class BountyOffers {
         return (now / refresh + 1) * refresh;
     }
 
-    static List<Offer> pick(long worldSeed, long period, int rerolls, int count, Map<ResourceLocation, BountyDefinition> definitions, Set<ResourceLocation> previousOffers) {
+    public static List<Offer> pick(long worldSeed, long period, int rerolls, int count, Map<ResourceLocation, BountyDefinition> definitions, Set<ResourceLocation> previousOffers) {
         List<WeightedEntry.Wrapper<Offer>> candidates = new ArrayList<>();
         definitions.forEach((entityId, definition) -> {
             if (BestiaryEntries.get(entityId) != null) candidates.add(WeightedEntry.wrap(new Offer(entityId, definition), definition.weight()));
         });
-        if (candidates.size() - previousOffers.size() >= count) candidates.removeIf(candidate -> previousOffers.contains(candidate.data().entityId()));
+        if (candidates.size() - previousOffers.size() >= count) candidates.removeIf(candidate -> previousOffers.contains(candidate.getData().entityId()));
         RandomSource random = RandomSource.create(period * 0x9E3779B97F4A7C15L ^ worldSeed ^ rerolls * 0xC2B2AE3D27D4EB4FL);
         List<Offer> offers = new ArrayList<>();
         while (offers.size() < count && !candidates.isEmpty()) {
             WeightedEntry.Wrapper<Offer> chosen = WeightedRandom.getRandomItem(random, candidates).orElseThrow();
             candidates.remove(chosen);
-            offers.add(chosen.data());
+            offers.add(chosen.getData());
         }
         return offers;
     }

@@ -6,8 +6,6 @@ Everything is data-driven and works with any creature, vanilla or modded. The va
 
 **Website:** https://mods.silvertide.net/beasts-and-bounties
 
-**Requires [SilverLib](https://www.curseforge.com/minecraft/mc-mods/silverlib).**
-
 ---
 
 ## The Bestiary
@@ -303,8 +301,7 @@ All `/bestiary` commands need operator level 2.
 
 ## Requirements
 
-- Minecraft 1.21.1
-- NeoForge
-- [SilverLib](https://www.curseforge.com/minecraft/mc-mods/silverlib)
+- Minecraft 1.20.1
+- Forge
 
 Install on both the client and the server.

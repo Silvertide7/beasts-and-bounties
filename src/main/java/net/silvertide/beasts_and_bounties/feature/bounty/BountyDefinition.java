@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.item.ItemStack;
+import net.silvertide.beasts_and_bounties.core.StrictCodecs;
 
 import java.util.List;
 
@@ -12,7 +13,7 @@ public record BountyDefinition(int kills, int weight, int bonusKills, List<Bount
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("kills", 3).forGetter(BountyDefinition::kills),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("weight", 10).forGetter(BountyDefinition::weight),
             ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("bonus_kills", 0).forGetter(BountyDefinition::bonusKills),
-            BountyReward.CODEC.listOf().optionalFieldOf("rewards", List.of()).forGetter(BountyDefinition::rewards)
+            StrictCodecs.optionalField("rewards", BountyReward.CODEC.listOf(), List.of()).forGetter(BountyDefinition::rewards)
     ).apply(instance, BountyDefinition::new));
 
     public List<ItemStack> itemRewards() {
