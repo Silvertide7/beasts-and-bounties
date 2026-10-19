@@ -240,6 +240,7 @@ Bestiary content is tuned in the datapack, not in config. The config files cover
 | <code>abandonCooldownMinutes</code> |20      |Real minutes after abandoning a bounty before the board posts again.                             |
 | <code>allowAbandon</code> |true    |Whether a player may abandon an accepted bounty.                                                 |
 | <code>showLastSeen</code> |false   |Hovering a poster shows where the creature was last seen, even before the player has learned it. |
+| <code>balancedPostings</code> |false  |Every board holds at least one elite or boss posting and one normal posting; the rest roll by weight. |
 
 ### `beasts_and_bounties-tracking-server.toml`
 

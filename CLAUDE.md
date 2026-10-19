@@ -805,7 +805,9 @@ is only where you look. One bounty is active at a time.
 - **Config** (`beasts_and_bounties-bounty-server.toml`): `refreshMinecraftDays` (1.0),
   `offersShown` (3, 1–3), `claimCooldownMinutes` (10), `abandonCooldownMinutes` (20),
   `allowAbandon` (true), `showLastSeen` (false: when off the server sends no habitat, so the
-  posters have no "Last seen:" tooltip). Per-creature numbers are data, never config.
+  posters have no "Last seen:" tooltip), `balancedPostings` (false; on, the first pick is drawn by weight
+  from elites and bosses only, the second from normals only, and the rest from everything left, so
+  every board holds one of each; off, every pick is a free weighted roll). Per-creature numbers are data, never config.
 - **Board screen** (`BountyBoardScreen`, opened by the `BoardOpened` handler): background
   `textures/gui/bounty_board.png` (352×188, hand-painted); its usable area is `(19, 21)` 314×145,
   and the screen draws nothing outside it (no drawn title: the texture owns the frame). Postings

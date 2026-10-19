@@ -27,6 +27,7 @@ import net.silvertide.beasts_and_bounties.feature.bounty.BountyReward;
 import net.silvertide.beasts_and_bounties.feature.bounty.BountyState;
 import net.silvertide.beasts_and_bounties.feature.bounty.PlayerBounties;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntries;
+import net.silvertide.beasts_and_bounties.feature.bestiary.Classification;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryProgress;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Progress;
 
@@ -63,20 +64,31 @@ public class BountyGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void balancedBoardsHoldAnEliteOrBossAndANormal(GameTestHelper helper) {
+        for (long period = 1; period <= 20; period++) {
+            List<BountyOffers.Offer> offers = BountyOffers.pick(42, period, 0, 3, true, BountyDefinitions.all(), Set.of());
+            helper.assertTrue(offers.size() == 3 && offers.stream().map(BountyOffers.Offer::entityId).distinct().count() == 3, "three distinct offers");
+            helper.assertTrue(offers.stream().anyMatch(offer -> BestiaryEntries.get(offer.entityId()).classification() != Classification.NORMAL), "period " + period + " holds an elite or boss");
+            helper.assertTrue(offers.stream().anyMatch(offer -> BestiaryEntries.get(offer.entityId()).classification() == Classification.NORMAL), "period " + period + " holds a normal creature");
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void offersAreStableWithinAPeriodAndChangeAcrossPeriods(GameTestHelper helper) {
-        List<BountyOffers.Offer> first = BountyOffers.pick(42, 1, 0, 3, BountyDefinitions.all(), Set.of());
-        List<BountyOffers.Offer> again = BountyOffers.pick(42, 1, 0, 3, BountyDefinitions.all(), Set.of());
+        List<BountyOffers.Offer> first = BountyOffers.pick(42, 1, 0, 3, false, BountyDefinitions.all(), Set.of());
+        List<BountyOffers.Offer> again = BountyOffers.pick(42, 1, 0, 3, false, BountyDefinitions.all(), Set.of());
         helper.assertTrue(first.size() == 3, "three offers are shown");
         helper.assertTrue(first.stream().map(BountyOffers.Offer::entityId).distinct().count() == 3, "offers are distinct");
         helper.assertTrue(first.equals(again), "the same period gives the same offers");
         boolean anyDifferent = false;
-        for (long period = 2; period <= 6; period++) anyDifferent |= !BountyOffers.pick(42, period, 0, 3, BountyDefinitions.all(), Set.of()).equals(first);
+        for (long period = 2; period <= 6; period++) anyDifferent |= !BountyOffers.pick(42, period, 0, 3, false, BountyDefinitions.all(), Set.of()).equals(first);
         helper.assertTrue(anyDifferent, "later periods give different offers");
         boolean anyRerollDiffers = false;
-        for (int rerolls = 1; rerolls <= 5; rerolls++) anyRerollDiffers |= !BountyOffers.pick(42, 1, rerolls, 3, BountyDefinitions.all(), Set.of()).equals(first);
+        for (int rerolls = 1; rerolls <= 5; rerolls++) anyRerollDiffers |= !BountyOffers.pick(42, 1, rerolls, 3, false, BountyDefinitions.all(), Set.of()).equals(first);
         helper.assertTrue(anyRerollDiffers, "a reroll gives different offers in the same period");
         Set<ResourceLocation> firstIds = first.stream().map(BountyOffers.Offer::entityId).collect(Collectors.toSet());
-        List<BountyOffers.Offer> next = BountyOffers.pick(42, 2, 0, 3, BountyDefinitions.all(), firstIds);
+        List<BountyOffers.Offer> next = BountyOffers.pick(42, 2, 0, 3, false, BountyDefinitions.all(), firstIds);
         helper.assertTrue(next.stream().noneMatch(offer -> firstIds.contains(offer.entityId())), "the next board never repeats the previous one");
         ServerPlayer one = MockPlayers.inLevel(helper);
         ServerPlayer two = MockPlayers.inLevel(helper);

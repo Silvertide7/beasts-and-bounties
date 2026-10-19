@@ -1,3 +1,3 @@
-1.0.1
+1.0.2
 ---
-- Search bar text no longer draws a shadow.
+- New `balancedPostings` bounty config (off by default): when on, every board holds at least one elite or boss posting and one normal posting, with the rest rolled by weight.
