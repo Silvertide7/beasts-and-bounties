@@ -12,6 +12,7 @@ public final class BountyConfig {
     private static final ModConfigSpec.IntValue ABANDON_COOLDOWN_MINUTES;
     public static final ModConfigSpec.BooleanValue ALLOW_ABANDON;
     private static final ModConfigSpec.BooleanValue SHOW_LAST_SEEN;
+    static final ModConfigSpec.BooleanValue BALANCED_POSTINGS;
 
     private static final int TICKS_PER_MINECRAFT_DAY = 24000;
     private static final int SECONDS_PER_MINUTE = 60;
@@ -31,6 +32,8 @@ public final class BountyConfig {
                 .define("allowAbandon", true);
         SHOW_LAST_SEEN = builder.comment("Whether hovering a posting shows where the creature was last seen (its habitat), even before the player has learned it.")
                 .define("showLastSeen", false);
+        BALANCED_POSTINGS = builder.comment("Whether every board holds at least one elite or boss posting and one normal posting, with the rest rolled freely by weight. When false every posting is a free weighted roll.")
+                .define("balancedPostings", false);
         builder.pop();
         SPEC = builder.build();
     }
