@@ -1,4 +1,4 @@
-1.0.1
+1.0.2
 ---
-- Stronger boss boons: the ender dragon grants +10% movement speed, the wither +6 max health, the warden +0.3 knockback resistance and the elder guardian +4 armor.
-- New `balancedPostings` bounty config (off by default): when on, every board holds at least one elite or boss posting and one normal posting, with the rest rolled by weight.
+- Your active bounty's creature is now pinned to the top of the bestiary with its name and model, even before you've discovered it, so you can check the bounty's progress from the book.
+- Opening the bestiary while tracking a creature now selects that creature again, even when a bounty creature is pinned above it.
