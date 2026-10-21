@@ -1,3 +1,4 @@
-1.0.2
+1.0.3
 ---
-- New `balancedPostings` bounty config (off by default): when on, every board holds at least one elite or boss posting and one normal posting, with the rest rolled by weight.
+- Fixed a crash on startup outside the development environment: the tracking mixins could not find their targets because the mixin config did not reference its refmap.
+- Your active bounty's creature is now pinned to the top of the bestiary with its name and model, even before you've discovered it, so you can check the bounty's progress from the book.

@@ -26,6 +26,7 @@ import net.silvertide.beasts_and_bounties.feature.bestiary.Knowledge;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Progress;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Reward;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Tier;
+import net.silvertide.beasts_and_bounties.feature.bounty.BountyState;
 import net.silvertide.beasts_and_bounties.feature.bounty.client.ClientBounties;
 import net.silvertide.beasts_and_bounties.feature.tracking.client.ClientTracking;
 import net.silvertide.beasts_and_bounties.feature.tracking.client.TrackingClientEvents;
@@ -154,7 +155,7 @@ public final class BestiaryScreen extends Screen {
         }
     }
 
-    private record Row(ResourceLocation entityId, BestiaryEntry entry, Progress progress, Component name, FormattedCharSequence nameLine, String searchableName) {}
+    private record Row(ResourceLocation entityId, BestiaryEntry entry, Progress progress, Component name, FormattedCharSequence nameLine, String searchableName, boolean bountied, boolean bountyPreview) {}
 
     private static final int ROW_NAME_WIDTH = LIST_AREA.width() - ICON_SIZE - ICON_GAP - TRACKED_EYE_SIZE - ICON_GAP;
     private static final Sprite PAGE_FORWARD_SPRITE = Sprite.of("page_forward", ARROW_WIDTH, ARROW_HEIGHT);
@@ -230,14 +231,16 @@ public final class BestiaryScreen extends Screen {
 
     private void refresh() {
         discoveredRows.clear();
+        ResourceLocation bountied = ClientBounties.activeBountyCreature().orElse(null);
         ClientBestiary.entries().forEach((entityId, entry) -> {
             Progress progress = ClientBestiary.progress(entityId);
-            if (!entry.isDiscovered(progress)) return;
-            Component name = ClientBestiary.displayName(entityId, entry, progress);
+            boolean isBountied = entityId.equals(bountied);
+            boolean bountyPreview = !entry.isDiscovered(progress);
+            if (bountyPreview && !isBountied) return;
+            Component name = isBountied ? ForgeRegistries.ENTITY_TYPES.getValue(entityId).getDescription() : ClientBestiary.displayName(entityId, entry, progress);
             String searchableName = entry.knowledge(progress).name() ? name.getString().toLowerCase(Locale.ROOT) : "";
-            discoveredRows.add(new Row(entityId, entry, progress, name, font.split(name, ROW_NAME_WIDTH).get(0), searchableName));
+            discoveredRows.add(new Row(entityId, entry, progress, name, font.split(name, ROW_NAME_WIDTH).get(0), searchableName, isBountied, bountyPreview));
         });
-        ResourceLocation bountied = ClientBounties.activeBountyCreature().orElse(null);
         ResourceLocation tracked = ClientTracking.trackedCreature().orElse(null);
         if (!Objects.equals(bountied, pinnedBounty) || !Objects.equals(tracked, pinnedTracked)) listPage = 0;
         pinnedBounty = bountied;
@@ -255,13 +258,13 @@ public final class BestiaryScreen extends Screen {
         filteredRows.clear();
         for (Row row : discoveredRows) if (row.searchableName().contains(query)) filteredRows.add(row);
         listPage = Math.min(listPage, listPageCount() - 1);
-        ResourceLocation selectedId = selectedRow == null ? null : selectedRow.entityId();
+        ResourceLocation selectedId = selectedRow == null ? ClientTracking.trackedCreature().orElse(null) : selectedRow.entityId();
         select(filteredRows.stream().filter(row -> row.entityId().equals(selectedId)).findFirst()
                 .orElse(filteredRows.isEmpty() ? null : filteredRows.get(0)));
     }
 
     private void select(@Nullable Row row) {
-        boolean entityChanged = row == null || selectedRow == null || !row.entityId().equals(selectedRow.entityId());
+        boolean entityChanged = row == null || selectedRow == null || !row.entityId().equals(selectedRow.entityId()) || row.bountied() != selectedRow.bountied();
         selectedRow = row;
         if (entityChanged) {
             contentPage = 0;
@@ -288,7 +291,7 @@ public final class BestiaryScreen extends Screen {
         List<Tab> tabs = new ArrayList<>(List.of(Tab.OVERVIEW));
         if (knowledge.hasDetails()) tabs.add(Tab.KNOWLEDGE);
         if (!rewards.isEmpty()) tabs.add(Tab.REWARDS);
-        if (bonuses.hasTracking() || isSelectedBountied() || selectedRow.progress().bounties() > 0 || selectedRow.entry().usesBounties()) tabs.add(Tab.TRACKING);
+        if (!selectedRow.bountyPreview() && (bonuses.hasTracking() || selectedRow.bountied() || selectedRow.progress().bounties() > 0 || selectedRow.entry().usesBounties())) tabs.add(Tab.TRACKING);
         for (int i = 0; i < tabs.size(); i++) visibleTabs.add(new TabSlot(tabs.get(i), TabShape.at(i, tabs.size())));
         if (!tabs.contains(selectedTab)) selectedTab = Tab.OVERVIEW;
         rebuildHeader();
@@ -301,11 +304,7 @@ public final class BestiaryScreen extends Screen {
         }
 
         contentPage = Math.min(contentPage, contentPageCount() - 1);
-        if (displayedEntity == null && knowledge.model()) displayedEntity = createDisplayEntity(selectedRow.entityId());
-    }
-
-    private boolean isSelectedBountied() {
-        return ClientBounties.activeBountyCreature().filter(selectedRow.entityId()::equals).isPresent();
+        if (displayedEntity == null && (knowledge.model() || selectedRow.bountied())) displayedEntity = createDisplayEntity(selectedRow.entityId());
     }
 
     private void rebuildHeader() {
@@ -316,10 +315,7 @@ public final class BestiaryScreen extends Screen {
     }
 
     private void buildTracking(Bonuses bonuses) {
-        ClientBounties.activeBounty().filter(bounty -> bounty.entityId().equals(selectedRow.entityId())).ifPresent(bounty -> {
-            addLine(Component.translatable("gui.beasts_and_bounties.bounty_progress", bounty.killsSoFar(), bounty.killsRequired()).withStyle(ChatFormatting.DARK_RED));
-            pageLines.add(FormattedCharSequence.EMPTY);
-        });
+        if (addBountyProgressLine()) pageLines.add(FormattedCharSequence.EMPTY);
         if (!bonuses.hasTracking()) return;
         addLine(Component.translatable(isSelectedTracked() ? "gui.beasts_and_bounties.tracking.tracked" : "gui.beasts_and_bounties.tracking.untracked"));
         pageLines.add(FormattedCharSequence.EMPTY);
@@ -329,6 +325,12 @@ public final class BestiaryScreen extends Screen {
         pageLines.add(FormattedCharSequence.EMPTY);
         if (bonuses.activeTracking() == 0) addLine(Component.translatable("gui.beasts_and_bounties.tracking.active.none"));
         else addTrackingLevel("active", bonuses.activeTracking(), TrackingClientEvents.huntKeyName(), name);
+    }
+
+    private boolean addBountyProgressLine() {
+        Optional<BountyState.ActiveBounty> bounty = ClientBounties.activeBounty().filter(active -> active.entityId().equals(selectedRow.entityId()));
+        bounty.ifPresent(active -> addLine(Component.translatable("gui.beasts_and_bounties.bounty_progress", active.killsSoFar(), active.killsRequired()).withStyle(ChatFormatting.DARK_RED)));
+        return bounty.isPresent();
     }
 
     private void addTrackingLevel(String mode, int level, Object... details) {
@@ -343,16 +345,25 @@ public final class BestiaryScreen extends Screen {
         if (entry.classification() != Classification.NORMAL)
             addLine(Component.translatable("classification.beasts_and_bounties." + entry.classification().getSerializedName())
                     .withStyle(entry.classification().nameColor()));
+        if (selectedRow.bountyPreview()) {
+            addBountyProgressLine();
+            addNextMilestoneLine();
+            return;
+        }
         knowledge.type().ifPresent(type -> addLine(type.copy().withStyle(ChatFormatting.ITALIC)));
         addLine(Component.translatable("gui.beasts_and_bounties.kills", selectedRow.progress().kills()));
         addLine(Component.translatable("gui.beasts_and_bounties.bounties", selectedRow.progress().bounties()));
-        addLine(entry.nextRequirement(selectedRow.progress())
-                .map(requirement -> Component.translatable("gui.beasts_and_bounties.next_milestone", formatRequirement(requirement)))
-                .orElse(Component.translatable("gui.beasts_and_bounties.complete")));
+        addNextMilestoneLine();
         knowledge.description().ifPresent(description -> {
             pageLines.add(FormattedCharSequence.EMPTY);
             addLine(description);
         });
+    }
+
+    private void addNextMilestoneLine() {
+        addLine(selectedRow.entry().nextRequirement(selectedRow.progress())
+                .map(requirement -> Component.translatable("gui.beasts_and_bounties.next_milestone", formatRequirement(requirement)))
+                .orElse(Component.translatable("gui.beasts_and_bounties.complete")));
     }
 
     private void buildKnowledge(Knowledge knowledge) {

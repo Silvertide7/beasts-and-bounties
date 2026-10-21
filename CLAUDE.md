@@ -391,7 +391,7 @@ Forge 1.20.1 has no data sync of its own, so it is done by hand over the mod's `
   bonuses earned, and the next milestone's requirement (kills, bounties, or both), or "Entry complete. Nothing left to learn." once every milestone is reached.
 - **List order**: the tracked creature (if any) is pinned to the top, then revealed names
   alphabetically, then unrevealed `???` entries. Opening the book while tracking selects that
-  creature (it's first, and nothing else is selected yet) and opens on the Tracking tab, so Stop is
+  creature (the first selection prefers it, even when a bounty creature is pinned above it) and opens on the Tracking tab, so Stop is
   one click away; the pin and the tab follow tracking changes live via `refreshIfOpen`.
 - **Search**: an `EditBox` above the list. It filters the list on every keystroke with a
   case-insensitive substring match on the *revealed* name only, so a `???` entry can't be found by
@@ -849,7 +849,7 @@ is only where you look. One bounty is active at a time.
   multi-line, kept on screen), used by the book's tab names and the board's habitat.
 - **Book**: list order is bounty creature first (warm tint, `bounty_mark`: a 9×9 black crosshair),
   then the tracked creature (cool tint, `tracked_eye`), then the rest; a creature that is both
-  shows `tracked_bounty_mark` (the same crosshair in red) with the bounty tint. The list jumps back to page 1 whenever the pinned pair changes (`refresh()` compares
+  shows `tracked_bounty_mark` (the same crosshair in red) with the bounty tint. **While a bounty is active, its creature's row uses the real name and shows the model** whatever the player has learned (the same exception as the poster); everything else stays gated, search still matches only revealed names, and the row goes back to `???` and the placeholder when the bounty ends. An undiscovered bounty creature is listed too (a `bountyPreview` row) with an Overview of only "Bounty: 0 of 5 slain" and the next milestone's requirement, and no other tabs, until its first kill makes it a normal row. The list jumps back to page 1 whenever the pinned pair changes (`refresh()` compares
   it with the last sort), not on ordinary progress refreshes. The Tracking & Bounties tab shows
   "Bounty: 2 of 5 slain" for the active bounty's creature.
 - **Block**: model `block/bounty_board` is two authored elements, a 2×8 post and a 16×8 board on

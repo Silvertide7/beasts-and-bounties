@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "net.silvertide.beasts_and_bounties.feature.tracking.mixin",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "beasts_and_bounties.refmap.json",
   "client": [
     "EntityMixin",
     "MinecraftMixin"

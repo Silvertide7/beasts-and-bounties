@@ -1,3 +1,27 @@
+# Audit: bounty book rows, refmap fix, 1.0.3 (2026-10-21, branch `1-20-1`)
+
+Scope: the uncommitted diff. `BestiaryScreen` shows the active bounty creature's real name and model and lists it before discovery; the tracking mixin config declares its refmap; version 1.0.3 and changelog. Two passes: self-audit, then an independent reviewer given only the diff and the goal. All 30 gametests pass after the fixes, and the built jar ships `beasts_and_bounties.refmap.json` (SRG names) referenced from the mixin config.
+
+## Fixed
+
+- [x] **A1. (self) Duplicate bounty check.** `isSelectedBountied()` repeated what the new `Row.bountied` flag holds. Removed; the tab condition reads the flag.
+- [x] **A2. (self) Changelog missing the book change.** Added a line (since reworded by the user).
+- [x] **A3. (low) Preview text assumed a one-kill first milestone.** "Slay one to begin its entry." was wrong for packs whose first milestone needs more kills or a bounty. Preview rows now show the entry's real next requirement through the same line the Overview uses (`addNextMilestoneLine`); the lang key is gone.
+- [x] **A4. (low, older) Book did not open on the tracked creature when a bounty was pinned above it.** The first selection now prefers the tracked creature, so the Tracking tab opens as CLAUDE.md promises.
+
+## Accepted
+
+- [ ] **A5. (low) Mixed naming on one page.** A bountied creature whose name is not revealed shows its real name in the list and header, but the Tracking tab text and the Rewards heading still say `???` / "Against This Creature". This follows "everything else stays gated". Change only if it reads badly in game.
+
+## Open
+
+- [x] **A6. Changelog wording** (user's text): "if you haven't unlocked it anymore" reads oddly and "it's status" should be "its status".
+- [ ] **A7. In-game check.** Rendering is not covered by gametests: a bounty on a never-killed creature, on one with 1 kill, then claiming and abandoning.
+- [ ] **A8. Port to `main`.** None of the book changes are on the NeoForge branch yet. The refmap fix is Forge-only (NeoForge's mixin setup differs); check whether main needs it.
+- [ ] **A9. Problems export.** Export the IDE Problems tab into `claude_reference/problems` for a whole-project check.
+
+---
+
 # Audit: Forge 1.20.1 port (2026-10-17, branch `1-20-1`)
 
 Scope: the whole ported tree: every source file, the gametests, lang, both built-in datapacks,
