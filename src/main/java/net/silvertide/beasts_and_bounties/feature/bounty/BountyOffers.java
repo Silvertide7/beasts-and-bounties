@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.WeightedEntry;
 import net.minecraft.util.random.WeightedRandom;
+import net.minecraft.world.level.Level;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntries;
 import net.silvertide.beasts_and_bounties.feature.bestiary.BestiaryEntry;
 import net.silvertide.beasts_and_bounties.feature.bestiary.Classification;
@@ -22,9 +23,9 @@ public final class BountyOffers {
 
     private BountyOffers() {}
 
-    public static List<Offer> current(MinecraftServer server, long now) {
+    public static List<Offer> current(MinecraftServer server) {
         BountyBoardData board = BountyBoardData.of(server);
-        long period = now / BountyConfig.refreshTicks();
+        long period = period(server);
         Map<ResourceLocation, BountyDefinition> definitions = BountyDefinitions.all();
         if (board.isCurrent(period)) {
             return board.offers().stream().filter(definitions::containsKey).map(id -> new Offer(id, definitions.get(id))).toList();
@@ -34,9 +35,18 @@ public final class BountyOffers {
         return picked;
     }
 
-    public static long periodEndsAt(long now) {
-        long refresh = BountyConfig.refreshTicks();
-        return (now / refresh + 1) * refresh;
+    public static int dawnsUntilRefresh(MinecraftServer server) {
+        long day = day(server);
+        int refreshDays = BountyConfig.refreshDays();
+        return (int) (refreshDays - day % refreshDays);
+    }
+
+    public static long period(MinecraftServer server) {
+        return day(server) / BountyConfig.refreshDays();
+    }
+
+    private static long day(MinecraftServer server) {
+        return server.overworld().getDayTime() / Level.TICKS_PER_DAY;
     }
 
     public static List<Offer> pick(long worldSeed, long period, int rerolls, int count, boolean balanced, Map<ResourceLocation, BountyDefinition> definitions, Set<ResourceLocation> previousOffers) {

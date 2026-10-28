@@ -186,11 +186,11 @@ src/main/java/net/silvertide/beasts_and_bounties/
     BestiaryItem                right-click opens the screen on the client
   feature/bounty/
     BountyFeature               init: config, board block + item, sound, payloads, creative tab
-    BountyConfig                refresh period, offers shown, claim/abandon cooldowns, allowAbandon
+    BountyConfig                refresh days, offers shown, allowAbandon, showLastSeen, balancedPostings
     BountyDefinition, BountyReward   one bounty per entity: kills, weight, bonus_kills, item/experience rewards
     BountyDefinitions           SimpleJsonResourceReloadListener over data/<ns>/bounty (top pack wins)
     BountyOffers, BountyBoardData  the shared board: weighted picks per (world seed, refresh period, reroll count), never repeating the previous board; saved data
-    BountyState                 record(active bounty?, cooldownEndsAt) with the accept/kill/end rules
+    BountyState                 record(active bounty?, board period, claimed creatures) with the accept/kill/claim rules
     PlayerBounties              PlayerData<BountyState>; openBoard / accept / abandon / recordKill / complete
     BountyEvents                reload listener, join sync, death → recordKill for every participant
     BountyPayloads              BoardOpened, StateSync, BountyClaimed; AcceptBounty, AbandonBounty
@@ -634,7 +634,7 @@ walks a mock player through all three.
   lowers it) for one entry or every loaded entry. Use it to test a maxed-out bestiary.
 - `/bestiary board reroll` gives **everyone** new postings now (the world-wide `BountyBoardData`
   reroll counter salts the offer seed, and the new board excludes the old one's creatures), and `/bestiary board clear <targets>` drops the
-  targets' active bounty and cooldown. Registered by `BountyCommand`; Brigadier merges its `bestiary` literal with the
+  targets' active bounty and claimed postings. Registered by `BountyCommand`; Brigadier merges its `bestiary` literal with the
   bestiary feature's.
 
 Counts clamp to 0 and `Integer.MAX_VALUE`. Entity suggestions come from the loaded entries. Every
@@ -743,7 +743,7 @@ There is no datagen and no `data` run config.
 A **bounty board** block (a free-standing sign on a post: `BountyBoardBlock`, a
 `HorizontalDirectionalBlock` with no block entity) posts hunts. **The postings are shared by the
 whole server** (one daily board, so friends simply take the same posting; there is no party or
-team system), while progress, the active bounty and cooldowns are **per player**. The board block
+team system), while progress, the active bounty and claimed postings are **per player**. The board block
 is only where you look. One bounty is active at a time.
 
 - **Data**: `data/<ns>/bounty/<entity_path>.json`, path-is-the-id like entries, loaded by a
@@ -770,27 +770,32 @@ is only where you look. One bounty is active at a time.
   9L−158 after). The numbers live in the JSON files; `everyShippedBountyMatchesAnEntry` pins the
   zombie's.
 - **Offers** (`BountyOffers.pick`): `offersShown` distinct weighted picks from a `RandomSource`
-  seeded by the overworld seed, `gameTime / refreshTicks` and the world's reroll count, so the same
-  period gives every player the same postings. **A new board never repeats the previous one**:
+  seeded by the overworld seed, the period (overworld `dayTime / 24000 / refreshDays`) and the
+  world's reroll count, so the same period gives every player the same postings. The period follows
+  the world's **day time, not game time**, so the board changes at dawn, mods that lengthen the day
+  (Better Days) lengthen the period with it, and sleeping through the night brings new postings.
+  `/time set` backwards just yields a fresh (non-repeating) board. **A new board never repeats the previous one**:
   `BountyBoardData` (a `SavedData` on the overworld) remembers the reroll count plus the last
   board's period, reroll count and creature ids; `current()` returns the remembered ids while
   they are current and otherwise picks with those ids excluded (unless that would leave fewer
   candidates than `offersShown`) and records the result. Weights (`weight` in each bounty file)
   make common creatures show up more and rare ones less. The server sends them when the board opens
-  (`BoardOpened(offers, periodEndsAt, state)`, each offer carrying the kills, item stacks, XP and
+  (`BoardOpened(offers, dawnsUntilRefresh, state)`, each offer carrying the kills, item stacks, XP and
   habitat text the card shows) and recomputes them to validate `AcceptBounty`.
 - **State**: `PlayerData` `bounty` = `BountyState(Optional<ActiveBounty(entityId, killsRequired,
-  killsSoFar)>, cooldownEndsAt)`, persisted and copied on respawn; absent = `NONE`. (An old save's
-  `rerolls` field is ignored by the codec.) Rules are pure:
-  `canAccept(now)`, `accepted`, `killRecorded` (only for the matching creature), `ended(now,
-  cooldown)`. Accept needs no active bounty and an elapsed cooldown. Abandon (`allowAbandon`) and
-  completion both end the bounty with their own cooldown (`abandonCooldownMinutes`,
-  `claimCooldownMinutes`, real minutes). An active bounty never expires on its own.
+  killsSoFar)>, boardPeriod, claimed)`, persisted and copied on respawn; absent = `NONE`. (An old
+  save's `rerolls` and `cooldown_ends_at` fields are ignored by the codec.) **There are no
+  cooldowns: each posting can be claimed once per player per board.** `claimed` lists the creatures
+  this player finished on board `boardPeriod`; `onBoard(period)` drops it when the period has moved
+  on, and the server always normalizes with the current period before validating or sending. Rules
+  are pure: `canAccept(entityId)` (no active bounty, not claimed), `accepted`, `killRecorded` (only
+  for the matching creature), `completed` (adds the creature to `claimed`), `abandoned` (claims
+  nothing, so the posting can be taken again at once). An active bounty never expires on its own.
 - **Kills**: `BountyEvents` on `LivingDeathEvent` (LOWEST) gives every `CombatTracking.participants`
   member with a matching active bounty one kill ("Bounty: 2 of 5 slain" on the action bar). On
   completion: item rewards via `ItemHandlerHelper.giveItemToPlayer` (overflow drops), XP via
   `giveExperiencePoints`, then `BestiaryProgress.addBounties(1)` and `addKills(bonus_kills)`, the
-  claim cooldown, the mod's `bounty.claimed` sound (delegates to vanilla's villager "yes", volume
+  posting marked claimed, the mod's `bounty.claimed` sound (delegates to vanilla's villager "yes", volume
   0.6) and a `BountyClaimed` payload for the client toast. **Accepting changes nothing in the
   book**; the kill and the bonus kills do.
 - **PMMO bridge** (`PmmoBridge`): Project MMO is an **optional** dependency (`compileOnly fg.deobf`
@@ -802,8 +807,8 @@ is only where you look. One bounty is active at a time.
   present the server sends each skill reward as a ready-made "1000 Fishing" line (the skill name
   via PMMO's own `pmmo.<skill>` lang key). The poster draws them on the experience line after "+60 XP". The shipped pack grants none; it is for
   packs that run PMMO.
-- **Config** (`beasts_and_bounties-bounty-server.toml`): `refreshMinecraftDays` (1.0),
-  `offersShown` (3, 1–3), `claimCooldownMinutes` (10), `abandonCooldownMinutes` (20),
+- **Config** (`beasts_and_bounties-bounty-server.toml`): `refreshDays` (1, whole dawns, 1–100),
+  `offersShown` (3, 1–3),
   `allowAbandon` (true), `showLastSeen` (false: when off the server sends no habitat, so the
   posters have no "Last seen:" tooltip), `balancedPostings` (false; on, the first pick is drawn by weight
   from elites and bosses only, the second from normals only, and the rest from everything left, so
@@ -838,13 +843,14 @@ is only where you look. One bounty is active at a time.
   `RenderSystem.setShaderColor` does not reach entity rendering here; the render is a copy of
   `renderEntityInInventory` with that buffer source. With a bounty active the postings are replaced
   by one poster for the target with "2 of 5 slain", its reward line and an Abandon button (with a bounty active the server sends that bounty's own definition as the only offer, since it is usually not in the current period's postings), footer "Finish this hunt
-  before taking another." On cooldown (after completing or abandoning) the board is **empty** and
-  the footer reads "More bounties should arrive in 20 minutes."; otherwise "New postings in 14
-  minutes." Durations use whole words with singular keys ("1 minute", "45 seconds"). Accept/Abandon send their payload and **the board stays open**: the server
+  before taking another." A posting the player already claimed on this board stays up with
+  "Claimed" (dark green) in place of "Slay N" and no Accept button. The footer otherwise reads
+  "New postings at dawn." / "New postings at dawn in 3 days." (the server sends `dawnsUntilRefresh`;
+  real time can't be shown because a modded day's length is unknown). Accept/Abandon send their payload and **the board stays open**: the server
   answers a successful accept or abandon with a fresh `BoardOpened` flagged `refreshOnly`, and the
   client's handler updates an already-open `BountyBoardScreen` in place (`show`, which re-runs
   `init`); a refresh that arrives after the player closed the board is dropped rather than
-  reopening it. A refused accept (cooldown, not offered) only shows its action-bar message.
+  reopening it. A refused accept (already claimed, not offered) only shows its action-bar message.
 - **Tooltips** (`bestiary/client/Tooltips`): the one tooltip renderer (mod `tooltip` nine-slice,
   multi-line, kept on screen), used by the book's tab names and the board's habitat.
 - **Book**: list order is bounty creature first (warm tint, `bounty_mark`: a 9×9 black crosshair),

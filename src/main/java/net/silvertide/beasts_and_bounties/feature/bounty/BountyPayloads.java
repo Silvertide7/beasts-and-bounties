@@ -36,16 +36,16 @@ public final class BountyPayloads {
         }
     }
 
-    public record BoardOpened(List<Offer> offers, long periodEndsAt, BountyState state, boolean refreshOnly) {
+    public record BoardOpened(List<Offer> offers, int dawnsUntilRefresh, BountyState state, boolean refreshOnly) {
         void encode(FriendlyByteBuf buf) {
             buf.writeCollection(offers, (out, offer) -> offer.write(out));
-            buf.writeVarLong(periodEndsAt);
+            buf.writeVarInt(dawnsUntilRefresh);
             state.write(buf);
             buf.writeBoolean(refreshOnly);
         }
 
         static BoardOpened decode(FriendlyByteBuf buf) {
-            return new BoardOpened(buf.readList(Offer::read), buf.readVarLong(), BountyState.read(buf), buf.readBoolean());
+            return new BoardOpened(buf.readList(Offer::read), buf.readVarInt(), BountyState.read(buf), buf.readBoolean());
         }
     }
 
