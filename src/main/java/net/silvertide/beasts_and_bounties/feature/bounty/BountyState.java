@@ -7,9 +7,11 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
-public record BountyState(Optional<ActiveBounty> active, long cooldownEndsAt) {
+public record BountyState(Optional<ActiveBounty> active, long boardPeriod, List<ResourceLocation> claimed) {
     public record ActiveBounty(ResourceLocation entityId, int killsRequired, int killsSoFar) {
         static final Codec<ActiveBounty> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 ResourceLocation.CODEC.fieldOf("entity").forGetter(ActiveBounty::entityId),
@@ -29,40 +31,47 @@ public record BountyState(Optional<ActiveBounty> active, long cooldownEndsAt) {
 
     public static final Codec<BountyState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ActiveBounty.CODEC.optionalFieldOf("active").forGetter(BountyState::active),
-            Codec.LONG.optionalFieldOf("cooldown_ends_at", 0L).forGetter(BountyState::cooldownEndsAt)
+            Codec.LONG.optionalFieldOf("board_period", 0L).forGetter(BountyState::boardPeriod),
+            ResourceLocation.CODEC.listOf().optionalFieldOf("claimed", List.of()).forGetter(BountyState::claimed)
     ).apply(instance, BountyState::new));
     public static final StreamCodec<ByteBuf, BountyState> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.optional(ActiveBounty.STREAM_CODEC), BountyState::active,
-            ByteBufCodecs.VAR_LONG, BountyState::cooldownEndsAt,
+            ByteBufCodecs.VAR_LONG, BountyState::boardPeriod,
+            ResourceLocation.STREAM_CODEC.apply(ByteBufCodecs.list()), BountyState::claimed,
             BountyState::new);
-    public static final BountyState NONE = new BountyState(Optional.empty(), 0);
+    public static final BountyState NONE = new BountyState(Optional.empty(), 0, List.of());
 
-    public boolean canAccept(long now) {
-        return active.isEmpty() && now >= cooldownEndsAt;
+    public BountyState onBoard(long period) {
+        return period == boardPeriod ? this : new BountyState(active, period, List.of());
+    }
+
+    public boolean hasClaimed(ResourceLocation entityId) {
+        return claimed.contains(entityId);
+    }
+
+    public boolean canAccept(ResourceLocation entityId) {
+        return active.isEmpty() && !hasClaimed(entityId);
     }
 
     public BountyState accepted(ResourceLocation entityId, int killsRequired) {
-        return new BountyState(Optional.of(new ActiveBounty(entityId, killsRequired, 0)), cooldownEndsAt);
+        return new BountyState(Optional.of(new ActiveBounty(entityId, killsRequired, 0)), boardPeriod, claimed);
     }
 
     public Optional<BountyState> killRecorded(ResourceLocation entityId) {
         return active.filter(bounty -> bounty.entityId().equals(entityId) && !bounty.isComplete())
-                .map(bounty -> new BountyState(Optional.of(new ActiveBounty(entityId, bounty.killsRequired(), bounty.killsSoFar() + 1)), cooldownEndsAt));
+                .map(bounty -> new BountyState(Optional.of(new ActiveBounty(entityId, bounty.killsRequired(), bounty.killsSoFar() + 1)), boardPeriod, claimed));
     }
 
-    public BountyState ended(long now, long cooldownTicks) {
-        return new BountyState(Optional.empty(), now + cooldownTicks);
+    public BountyState completed() {
+        List<ResourceLocation> claimedNow = active.map(bounty -> Stream.concat(claimed.stream(), Stream.of(bounty.entityId())).toList()).orElse(claimed);
+        return new BountyState(Optional.empty(), boardPeriod, claimedNow);
     }
 
-    public BountyState cleared() {
-        return new BountyState(Optional.empty(), 0);
+    public BountyState abandoned() {
+        return new BountyState(Optional.empty(), boardPeriod, claimed);
     }
 
-    public long ticksUntilReady(long now) {
-        return Math.max(0, cooldownEndsAt - now);
-    }
-
-    public boolean isEmpty(long now) {
-        return active.isEmpty() && ticksUntilReady(now) == 0;
+    public boolean isEmpty() {
+        return active.isEmpty() && claimed.isEmpty();
     }
 }

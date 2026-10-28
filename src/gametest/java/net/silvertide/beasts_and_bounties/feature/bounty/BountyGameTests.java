@@ -10,10 +10,12 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -85,17 +87,25 @@ public class BountyGameTests {
         helper.assertTrue(next.stream().noneMatch(offer -> firstIds.contains(offer.entityId())), "the next board never repeats the previous one");
         ServerPlayer one = helper.makeMockServerPlayerInLevel();
         ServerPlayer two = helper.makeMockServerPlayerInLevel();
-        long now = helper.getLevel().getGameTime();
-        helper.assertTrue(BountyOffers.current(one.server, now).equals(BountyOffers.current(two.server, now)), "the board is shared by every player");
+        helper.assertTrue(BountyOffers.current(one.server).equals(BountyOffers.current(two.server)), "the board is shared by every player");
+        ServerLevel overworld = one.server.overworld();
+        long savedDayTime = overworld.getDayTime();
+        overworld.setDayTime(Level.TICKS_PER_DAY * 10 + 100);
+        List<BountyOffers.Offer> today = BountyOffers.current(one.server);
+        helper.assertTrue(BountyOffers.dawnsUntilRefresh(one.server) == 1, "with the default config the board refreshes at the next dawn");
+        overworld.setDayTime(Level.TICKS_PER_DAY * 11 - 1);
+        helper.assertTrue(BountyOffers.current(one.server).equals(today), "the board holds until dawn however many ticks pass");
+        overworld.setDayTime(Level.TICKS_PER_DAY * 11);
+        helper.assertTrue(!BountyOffers.current(one.server).equals(today), "dawn brings new postings");
+        overworld.setDayTime(savedDayTime);
         helper.succeed();
     }
 
     @GameTest(template = "empty")
     @SuppressWarnings("removal")
-    public static void acceptingValidatesOffersActiveBountyAndCooldown(GameTestHelper helper) {
+    public static void acceptingValidatesOffersAndActiveBounty(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        long now = helper.getLevel().getGameTime();
-        List<BountyOffers.Offer> offers = BountyOffers.current(player.server, now);
+        List<BountyOffers.Offer> offers = BountyOffers.current(player.server);
         ResourceLocation unoffered = BountyDefinitions.all().keySet().stream()
                 .filter(entityId -> offers.stream().noneMatch(offer -> offer.entityId().equals(entityId))).findFirst().orElseThrow();
         PlayerBounties.accept(player, unoffered);
@@ -110,9 +120,9 @@ public class BountyGameTests {
 
         PlayerBounties.abandon(player);
         BountyState abandoned = PlayerBounties.state(player);
-        helper.assertTrue(abandoned.active().isEmpty() && abandoned.ticksUntilReady(now) > 0, "abandoning clears the bounty and starts a cooldown");
+        helper.assertTrue(abandoned.active().isEmpty() && abandoned.claimed().isEmpty(), "abandoning clears the bounty without claiming it");
         PlayerBounties.accept(player, offered);
-        helper.assertTrue(PlayerBounties.state(player).active().isEmpty(), "nothing can be accepted during the cooldown");
+        helper.assertTrue(PlayerBounties.state(player).active().isPresent(), "an abandoned posting can be taken again at once");
         helper.succeed();
     }
 
@@ -120,24 +130,21 @@ public class BountyGameTests {
     @SuppressWarnings("removal")
     public static void boardCommandsRerollAndClear(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        long now = helper.getLevel().getGameTime();
-        List<BountyOffers.Offer> before = BountyOffers.current(player.server, now);
-        PlayerBounties.accept(player, before.getFirst().entityId());
-        PlayerBounties.abandon(player);
-        helper.assertTrue(!PlayerBounties.state(player).canAccept(now), "abandoning leaves a cooldown");
+        List<BountyOffers.Offer> before = BountyOffers.current(player.server);
+        player.setData(PlayerBounties.STATE, new BountyState(Optional.empty(), BountyOffers.period(player.server), List.of(before.getFirst().entityId())));
 
         CommandSourceStack source = player.createCommandSourceStack().withPermission(Commands.LEVEL_GAMEMASTERS);
         Commands commands = helper.getLevel().getServer().getCommands();
         commands.performPrefixedCommand(source, "bestiary board clear @s");
-        helper.assertTrue(PlayerBounties.state(player).canAccept(now), "board clear drops the cooldown");
+        helper.assertTrue(PlayerBounties.state(player).canAccept(before.getFirst().entityId()), "board clear forgets claimed postings");
         helper.assertTrue(PlayerBounties.state(player).equals(BountyState.NONE), "a cleared player stores nothing");
 
         int rerollsBefore = BountyBoardData.of(player.server).rerolls();
         commands.performPrefixedCommand(source, "bestiary board reroll");
         helper.assertTrue(BountyBoardData.of(player.server).rerolls() == rerollsBefore + 1, "reroll bumps the world counter");
-        List<BountyOffers.Offer> after = BountyOffers.current(player.server, now);
+        List<BountyOffers.Offer> after = BountyOffers.current(player.server);
         helper.assertTrue(after.stream().noneMatch(before::contains), "rerolled postings share nothing with the previous board");
-        helper.assertTrue(BountyOffers.current(player.server, now).equals(after), "the rerolled board is stable until the next change");
+        helper.assertTrue(BountyOffers.current(player.server).equals(after), "the rerolled board is stable until the next change");
         helper.succeed();
     }
 
@@ -145,13 +152,16 @@ public class BountyGameTests {
     @SuppressWarnings("removal")
     public static void killsAdvanceAndCompleteABounty(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setData(PlayerBounties.STATE, BountyState.NONE.accepted(ZOMBIE, 2));
+        long period = BountyOffers.period(player.server);
+        player.setData(PlayerBounties.STATE, BountyState.NONE.onBoard(period).accepted(ZOMBIE, 2));
         DamageSources sources = helper.getLevel().damageSources();
         killZombie(helper, player, sources);
         helper.assertTrue(PlayerBounties.state(player).active().orElseThrow().killsSoFar() == 1, "the first kill advances the bounty");
         killZombie(helper, player, sources);
         BountyState completed = PlayerBounties.state(player);
-        helper.assertTrue(completed.active().isEmpty() && completed.ticksUntilReady(helper.getLevel().getGameTime()) > 0, "the last kill completes the bounty and starts the claim cooldown");
+        helper.assertTrue(completed.active().isEmpty() && completed.boardPeriod() == period && completed.hasClaimed(ZOMBIE), "the last kill completes the bounty and marks the posting claimed");
+        helper.assertTrue(!completed.canAccept(ZOMBIE), "a claimed posting can't be taken again on the same board");
+        helper.assertTrue(completed.onBoard(period + 1).canAccept(ZOMBIE), "the next board forgets what was claimed");
         helper.assertTrue(player.getInventory().countItem(Items.IRON_INGOT) == 12, "the iron reward is given, got " + player.getInventory().countItem(Items.IRON_INGOT));
         helper.assertTrue(player.totalExperience == 100, "the experience reward is given, got " + player.totalExperience);
         Progress progress = BestiaryProgress.of(player, ZOMBIE);
@@ -163,7 +173,7 @@ public class BountyGameTests {
     @SuppressWarnings("removal")
     public static void bountyStateSurvivesSavingAndDeath(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        BountyState state = new BountyState(Optional.of(new BountyState.ActiveBounty(ZOMBIE, 5, 2)), 900);
+        BountyState state = new BountyState(Optional.of(new BountyState.ActiveBounty(ZOMBIE, 5, 2)), 7, List.of(ResourceLocation.withDefaultNamespace("skeleton")));
         player.setData(PlayerBounties.STATE, state);
         CompoundTag saved = player.saveWithoutId(new CompoundTag());
         ServerPlayer loaded = helper.makeMockServerPlayerInLevel();

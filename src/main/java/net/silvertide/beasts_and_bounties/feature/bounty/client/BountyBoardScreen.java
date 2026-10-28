@@ -3,7 +3,6 @@ package net.silvertide.beasts_and_bounties.feature.bounty.client;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
-import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -82,7 +81,6 @@ final class BountyBoardScreen extends Screen {
     private static final int TEXT_COLOR = 0x3B2A1A;
     private static final int FOOTER_COLOR = 0xE6D3A3;
     private static final int GLYPH_HEIGHT = 8;
-    private static final int SECONDS_PER_MINUTE = 60;
 
     private enum PosterButton {
         ACCEPT("accept_text", 66),
@@ -135,7 +133,7 @@ final class BountyBoardScreen extends Screen {
         posters.clear();
         Optional<BountyState.ActiveBounty> active = board.state().active();
         List<ResourceLocation> shown = active.map(bounty -> List.of(bounty.entityId()))
-                .orElseGet(() -> board.state().canAccept(now()) ? board.offers().stream().map(BountyPayloads.Offer::entityId).toList() : List.of());
+                .orElseGet(() -> board.offers().stream().map(BountyPayloads.Offer::entityId).toList());
         int rowLeft = left + CONTENT_X + (CONTENT_WIDTH - (shown.size() * CARD_WIDTH + (shown.size() - 1) * CARD_GAP)) / 2;
         for (int i = 0; i < shown.size(); i++) posters.add(poster(shown.get(i), rowLeft + i * (CARD_WIDTH + CARD_GAP)));
     }
@@ -223,17 +221,15 @@ final class BountyBoardScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
-        long now = now();
-        BountyState state = board.state();
-        Optional<BountyState.ActiveBounty> active = state.active();
+        Optional<BountyState.ActiveBounty> active = board.state().active();
         for (Poster poster : posters) {
             Component task = active.map(bounty -> Component.translatable("gui.beasts_and_bounties.board.progress", bounty.killsSoFar(), bounty.killsRequired()).withStyle(ChatFormatting.DARK_RED))
-                    .orElseGet(() -> offerOf(poster).map(offer -> Component.translatable("gui.beasts_and_bounties.board.kills", offer.kills()).withStyle(ChatFormatting.DARK_RED)).orElse(Component.empty()));
+                    .orElseGet(() -> board.state().hasClaimed(poster.entityId()) ? Component.translatable("gui.beasts_and_bounties.board.claimed").withStyle(ChatFormatting.DARK_GREEN)
+                            : offerOf(poster).map(offer -> Component.translatable("gui.beasts_and_bounties.board.kills", offer.kills()).withStyle(ChatFormatting.DARK_RED)).orElse(Component.empty()));
             renderPoster(graphics, poster, task, offerOf(poster).orElse(null), mouseX, mouseY);
         }
         Component footer = active.isPresent() ? Component.translatable("gui.beasts_and_bounties.board.active_hint")
-                : state.canAccept(now) ? Component.translatable("gui.beasts_and_bounties.board.refresh", duration(Math.max(0, board.periodEndsAt() - now)))
-                : Component.translatable("gui.beasts_and_bounties.board.cooldown", duration(state.ticksUntilReady(now)));
+                : refreshFooter(board.dawnsUntilRefresh());
         drawFooter(graphics, footer, left + CONTENT_X + CONTENT_WIDTH / 2, top + FOOTER_Y);
         for (Poster poster : posters) {
             if (isOverCard(mouseX, mouseY, poster) && !isOverButton(mouseX, mouseY, poster))
@@ -270,7 +266,7 @@ final class BountyBoardScreen extends Screen {
         drawScaledAt(graphics, poster.nameLine(), poster.centerX() - font.width(poster.nameLine()) * poster.nameScale() / 2, nameY, poster.nameScale(), TEXT_COLOR);
         drawCenteredScaled(graphics, task, poster.centerX(), y + TASK_Y, slayScale);
         if (rewards != null) renderRewards(graphics, poster, rewards, y + TASK_Y + GLYPH_HEIGHT * slayScale + LINE_GAP);
-        PosterButton button = posterButton();
+        PosterButton button = posterButton(poster);
         if (hovered && button != null) {
             int detailsTop = y + rewardDetailsTop();
             int detailsBottom = y + CARD_HEIGHT - CARD_PADDING;
@@ -406,34 +402,28 @@ final class BountyBoardScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         for (Poster poster : posters) {
             if (!isOverButton(mouseX, mouseY, poster)) continue;
-            PacketDistributor.sendToServer(posterButton() == PosterButton.ABANDON ? new BountyPayloads.AbandonBounty() : new BountyPayloads.AcceptBounty(poster.entityId()));
+            PacketDistributor.sendToServer(posterButton(poster) == PosterButton.ABANDON ? new BountyPayloads.AbandonBounty() : new BountyPayloads.AcceptBounty(poster.entityId()));
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    private static Component duration(long ticks) {
-        long seconds = Math.ceilDiv(ticks, SharedConstants.TICKS_PER_SECOND);
-        long minutes = Math.ceilDiv(seconds, SECONDS_PER_MINUTE);
-        if (seconds >= SECONDS_PER_MINUTE) return Component.translatable("gui.beasts_and_bounties.time.minutes" + (minutes == 1 ? ".one" : ""), minutes);
-        return Component.translatable("gui.beasts_and_bounties.time.seconds" + (seconds == 1 ? ".one" : ""), seconds);
-    }
-
-    private long now() {
-        return Minecraft.getInstance().level == null ? 0 : Minecraft.getInstance().level.getGameTime();
+    private static Component refreshFooter(int dawns) {
+        return dawns == 1 ? Component.translatable("gui.beasts_and_bounties.board.refresh.one")
+                : Component.translatable("gui.beasts_and_bounties.board.refresh", dawns);
     }
 
     private int cardTop() {
         return top + CONTENT_Y + (CONTENT_HEIGHT - CARD_HEIGHT) / 2;
     }
 
-    private @Nullable PosterButton posterButton() {
-        if (board.state().active().isEmpty()) return PosterButton.ACCEPT;
+    private @Nullable PosterButton posterButton(Poster poster) {
+        if (board.state().active().isEmpty()) return board.state().hasClaimed(poster.entityId()) ? null : PosterButton.ACCEPT;
         return BountyConfig.ALLOW_ABANDON.get() ? PosterButton.ABANDON : null;
     }
 
     private boolean isOverButton(double mouseX, double mouseY, Poster poster) {
-        PosterButton button = posterButton();
+        PosterButton button = posterButton(poster);
         if (button == null) return false;
         float cardCenterY = cardTop() + CARD_HEIGHT / 2f;
         float buttonCenterY = cardTop() + buttonTop() + BUTTON_HEIGHT / 2f;

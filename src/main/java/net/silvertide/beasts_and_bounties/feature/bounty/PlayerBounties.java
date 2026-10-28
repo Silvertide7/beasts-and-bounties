@@ -51,17 +51,16 @@ public final class PlayerBounties {
     }
 
     private static void sendBoard(ServerPlayer player, boolean refreshOnly) {
-        long now = player.level().getGameTime();
-        BountyState state = state(player);
+        BountyState state = state(player).onBoard(BountyOffers.period(player.server));
         List<BountyOffers.Offer> shown = state.active()
                 .map(bounty -> Optional.ofNullable(BountyDefinitions.all().get(bounty.entityId()))
                         .map(definition -> List.of(new BountyOffers.Offer(bounty.entityId(), definition))).orElse(List.of()))
-                .orElseGet(() -> BountyOffers.current(player.server, now));
+                .orElseGet(() -> BountyOffers.current(player.server));
         List<BountyPayloads.Offer> offers = shown.stream()
                 .map(offer -> new BountyPayloads.Offer(offer.entityId(), offer.definition().kills(), offer.definition().itemRewards(),
                         offer.definition().experienceReward(), skillExperienceLines(offer.definition()), lastSeen(offer.entityId())))
                 .toList();
-        Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.periodEndsAt(now), state, refreshOnly));
+        Payloads.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.dawnsUntilRefresh(player.server), state, refreshOnly));
     }
 
     private static List<Component> skillExperienceLines(BountyDefinition definition) {
@@ -77,14 +76,13 @@ public final class PlayerBounties {
     }
 
     static void accept(ServerPlayer player, ResourceLocation entityId) {
-        long now = player.level().getGameTime();
-        BountyState state = state(player);
-        if (!state.canAccept(now)) {
+        BountyState state = state(player).onBoard(BountyOffers.period(player.server));
+        if (!state.canAccept(entityId)) {
             player.displayClientMessage(Component.translatable(state.active().isPresent()
-                    ? "bounty.beasts_and_bounties.already_active" : "bounty.beasts_and_bounties.cooldown"), true);
+                    ? "bounty.beasts_and_bounties.already_active" : "bounty.beasts_and_bounties.already_claimed"), true);
             return;
         }
-        Optional<BountyOffers.Offer> offer = BountyOffers.current(player.server, now).stream().filter(candidate -> candidate.entityId().equals(entityId)).findFirst();
+        Optional<BountyOffers.Offer> offer = BountyOffers.current(player.server).stream().filter(candidate -> candidate.entityId().equals(entityId)).findFirst();
         if (offer.isEmpty()) {
             player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.not_offered"), true);
             return;
@@ -97,7 +95,7 @@ public final class PlayerBounties {
 
     static void abandon(ServerPlayer player) {
         if (!BountyConfig.ALLOW_ABANDON.get() || state(player).active().isEmpty()) return;
-        store(player, state(player).ended(player.level().getGameTime(), BountyConfig.abandonCooldownTicks()));
+        store(player, state(player).abandoned());
         player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.abandoned"), true);
         sendBoard(player, true);
     }
@@ -126,7 +124,7 @@ public final class PlayerBounties {
             BestiaryProgress.addBounties(player, bounty.entityId(), entry, 1);
             if (definition != null && definition.bonusKills() > 0) BestiaryProgress.addKills(player, bounty.entityId(), entry, definition.bonusKills());
         }
-        store(player, state(player).ended(player.level().getGameTime(), BountyConfig.claimCooldownTicks()));
+        store(player, state(player).onBoard(BountyOffers.period(player.server)).completed());
         player.playNotifySound(BountySounds.CLAIMED.get(), SoundSource.PLAYERS, CLAIMED_VOLUME, 1f);
         Payloads.sendIfConnected(player, new BountyPayloads.BountyClaimed(bounty.entityId()));
     }
@@ -136,11 +134,11 @@ public final class PlayerBounties {
     }
 
     static void clear(ServerPlayer player) {
-        store(player, state(player).cleared());
+        store(player, BountyState.NONE);
     }
 
     private static void store(ServerPlayer player, BountyState state) {
-        if (state.isEmpty(player.level().getGameTime())) player.removeData(STATE);
+        if (state.isEmpty()) player.removeData(STATE);
         else player.setData(STATE, state);
         Payloads.sendIfConnected(player, new BountyPayloads.StateSync(state(player)));
     }
