@@ -5,13 +5,13 @@
   "rewards": [
     {
       "type": "item",
-      "item": "minecraft:netherite_ingot",
-      "count": 2
+      "item": "minecraft:diamond",
+      "count": 8
     },
     {
       "type": "item",
-      "item": "minecraft:diamond",
-      "count": 10
+      "item": "minecraft:heart_of_the_sea",
+      "count": 1
     },
     {
       "type": "experience",

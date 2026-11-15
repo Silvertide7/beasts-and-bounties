@@ -733,12 +733,13 @@ is only where you look. One bounty is active at a time.
   the cheap end; endermite 2 kills, 4 diamonds, 260 XP and shulker 4 kills, 4 diamonds, 300 XP at
   the dear end); elites ask 1–4 kills for 350–700 XP and 4–8 diamonds plus 12–24 of their theme
   (iron for wither skeleton and breeze, gold for ravager and piglin brute, emeralds for evoker and
-  illusioner); minor bosses 800 / 1000 XP with 2 / 3 netherite + 10 / 12 diamonds (elder guardian,
-  warden); major bosses 1500 / 2000 XP with 4 / 5 netherite + 16 / 20 diamonds (wither, ender
-  dragon). Weights follow commonness (12 for zombie, creeper, skeleton, spider; 3 for zoglin,
+  illusioner); minor bosses 800 / 1000 XP with 8 diamonds + a heart of the sea / 12 diamonds + 12 gold +
+  12 iron (elder guardian, warden); major bosses 1500 / 2000 XP with 1 netherite + 16 diamonds /
+  2 netherite + 20 diamonds (wither, ender dragon). Netherite is only ever offered by the wither
+  and ender dragon. Weights follow commonness (12 for zombie, creeper, skeleton, spider; 3 for zoglin,
   endermite, ravager, evoker; 1 for the bosses and the illusioner, which never spawns naturally).
-  Bonus kills are per classification: **+10 for normals, +5 for elites, +1 for bosses**, on top of the real kill and the +1 bounty. Items are ingots and gems only, never
-  blocks, at most two kinds per bounty so the poster's icon row stays short. From level 20, 100 XP
+  Bonus kills are per classification: **+10 for normals, +5 for elites, +1 for bosses**, on top of the real kill and the +1 bounty. Items are ingots and gems only (plus the elder guardian's heart of the sea), never
+  blocks, at most two kinds per bounty (three for the warden) so the poster's icon row stays short. From level 20, 100 XP
   is about 1.5 levels and 2000 about 22 (vanilla's per-level cost is 2L+7 up to 15, 5L−38 to 30,
   9L−158 after). The numbers live in the JSON files; `everyShippedBountyMatchesAnEntry` pins the
   zombie's.
