@@ -1,3 +1,37 @@
+# Audit: per-board bounty postings (2026-11-18)
+
+Scope: the `perBoardPostings` config, `BountyOffers.forBoard` / `boardSeed`, the board position on
+`BoardOpened` / `AcceptBounty` / `AbandonBounty`, the reach check in `PlayerBounties`, and the
+gametests. Two passes: my own read and an independent reviewer given only the diff and the goal.
+All 32 gametests pass.
+
+The reviewer confirmed that with the config off nothing behaves differently from before. It also
+confirmed the dimension comes from the server and never from the client, the seed mixing gives
+unrelated postings for neighbouring boards, payload handlers run on the main thread, there are no
+client class leaks, and the network version bump is right.
+
+## Fixed
+
+- [x] **P1. A hacked client could make the server load chunks anywhere.** `canUseBoard` read the
+  block before checking reach, and reading a block loads its chunk (or generates it). Repeated
+  accept packets with far-off positions could stall the server. Reach is now checked first.
+- [x] **P2. The board could go stale after abandoning out of reach.** The refresh was skipped, so the
+  screen kept showing the abandoned poster. The refresh is sent again every time; it only shows
+  postings and grants nothing.
+- [x] **P3. Misleading message.** An accept refused for reach said "That bounty isn't posted for
+  you." It now says "You're too far from the board." (`bounty.beasts_and_bounties.board_out_of_reach`).
+- [x] **P4. Constant in the wrong place / an extra roll.** `BOARD_REACH_LENIENCY` moved up with the
+  other constants, and a refused accept no longer rolls the board's postings first.
+- [x] **P5. The rule against accepting from a spot with no board was untested.**
+  `perBoardAcceptsOnlyAtAReachableBoard` switches the config on, checks that an accept from a spot
+  with no board is refused and one at a reachable board works, then restores the old value.
+- [x] **P6. Weak and fragile tests.** The "postings differ" checks compared ordered lists (the same
+  creatures in another order counted as different); they now compare sets. The accept test passed
+  `BlockPos.ZERO` and failed whenever `perBoardPostings` was on, which it is in the dev
+  `run/config`. It now stands at a real board, so it passes either way.
+
+---
+
 # Audit: wall-mounted bounty board (2026-11-18)
 
 Scope: `BountyBoardBlock`, the `bounty_board` blockstate, the new `block/bounty_board_wall` model and
@@ -23,8 +57,9 @@ replaceable blocks such as grass, rotate and mirror, and existing worlds loading
 
 ## Open
 
-- [ ] **W6. No gametest for placement or popping off.** A small test in `BountyGameTests` could
-  place a wall board, remove the block behind it, and check that the board dropped as an item.
+- [x] **W6. No gametest for placement or popping off.** `boardHangsOnAWallAndPopsOffWithoutSupport`
+  checks that clicking a wall's side hangs the board facing away from it, and that both a wall and a
+  standing board drop as items once their support is removed. It fails if `canSurvive` stops checking.
 - [ ] **W7. Not waterloggable** (this was already true before the change). Vanilla signs keep the
   water they're placed in; the board removes it. Add only if wanted.
 

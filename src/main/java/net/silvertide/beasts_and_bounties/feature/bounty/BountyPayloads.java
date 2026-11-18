@@ -1,6 +1,7 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.chat.Component;
@@ -21,9 +22,9 @@ public final class BountyPayloads {
     private BountyPayloads() {}
 
     static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToServer(AcceptBounty.TYPE, AcceptBounty.STREAM_CODEC, (payload, context) -> PlayerBounties.accept((ServerPlayer) context.player(), payload.entityId()));
-        registrar.playToServer(AbandonBounty.TYPE, AbandonBounty.STREAM_CODEC, (payload, context) -> PlayerBounties.abandon((ServerPlayer) context.player()));
+        PayloadRegistrar registrar = event.registrar("2");
+        registrar.playToServer(AcceptBounty.TYPE, AcceptBounty.STREAM_CODEC, (payload, context) -> PlayerBounties.accept((ServerPlayer) context.player(), payload.board(), payload.entityId()));
+        registrar.playToServer(AbandonBounty.TYPE, AbandonBounty.STREAM_CODEC, (payload, context) -> PlayerBounties.abandon((ServerPlayer) context.player(), payload.board()));
         registrar.playToClient(BoardOpened.TYPE, BoardOpened.STREAM_CODEC, (payload, context) -> ClientBounties.openBoard(payload));
         registrar.playToClient(StateSync.TYPE, StateSync.STREAM_CODEC, (payload, context) -> ClientBounties.setState(payload.state()));
         registrar.playToClient(BountyClaimed.TYPE, BountyClaimed.STREAM_CODEC, (payload, context) -> ClientBounties.claimed(payload.entityId()));
@@ -40,9 +41,10 @@ public final class BountyPayloads {
                 Offer::new);
     }
 
-    public record BoardOpened(List<Offer> offers, int dawnsUntilRefresh, BountyState state, boolean refreshOnly) implements CustomPacketPayload {
+    public record BoardOpened(BlockPos board, List<Offer> offers, int dawnsUntilRefresh, BountyState state, boolean refreshOnly) implements CustomPacketPayload {
         static final Type<BoardOpened> TYPE = new Type<>(BeastsAndBountiesMod.id("board_opened"));
         static final StreamCodec<RegistryFriendlyByteBuf, BoardOpened> STREAM_CODEC = StreamCodec.composite(
+                BlockPos.STREAM_CODEC, BoardOpened::board,
                 Offer.STREAM_CODEC.apply(ByteBufCodecs.list()), BoardOpened::offers,
                 ByteBufCodecs.VAR_INT, BoardOpened::dawnsUntilRefresh,
                 BountyState.STREAM_CODEC, BoardOpened::state,
@@ -75,9 +77,12 @@ public final class BountyPayloads {
         }
     }
 
-    public record AcceptBounty(ResourceLocation entityId) implements CustomPacketPayload {
+    public record AcceptBounty(BlockPos board, ResourceLocation entityId) implements CustomPacketPayload {
         static final Type<AcceptBounty> TYPE = new Type<>(BeastsAndBountiesMod.id("accept_bounty"));
-        static final StreamCodec<ByteBuf, AcceptBounty> STREAM_CODEC = ResourceLocation.STREAM_CODEC.map(AcceptBounty::new, AcceptBounty::entityId);
+        static final StreamCodec<ByteBuf, AcceptBounty> STREAM_CODEC = StreamCodec.composite(
+                BlockPos.STREAM_CODEC, AcceptBounty::board,
+                ResourceLocation.STREAM_CODEC, AcceptBounty::entityId,
+                AcceptBounty::new);
 
         @Override
         public Type<AcceptBounty> type() {
@@ -85,9 +90,9 @@ public final class BountyPayloads {
         }
     }
 
-    public record AbandonBounty() implements CustomPacketPayload {
+    public record AbandonBounty(BlockPos board) implements CustomPacketPayload {
         static final Type<AbandonBounty> TYPE = new Type<>(BeastsAndBountiesMod.id("abandon_bounty"));
-        static final StreamCodec<ByteBuf, AbandonBounty> STREAM_CODEC = StreamCodec.unit(new AbandonBounty());
+        static final StreamCodec<ByteBuf, AbandonBounty> STREAM_CODEC = BlockPos.STREAM_CODEC.map(AbandonBounty::new, AbandonBounty::board);
 
         @Override
         public Type<AbandonBounty> type() {

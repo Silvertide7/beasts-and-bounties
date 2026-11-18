@@ -1,5 +1,7 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
+import it.unimi.dsi.fastutil.HashCommon;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.RandomSource;
@@ -21,6 +23,16 @@ public final class BountyOffers {
     public record Offer(ResourceLocation entityId, BountyDefinition definition) {}
 
     private BountyOffers() {}
+
+    static List<Offer> forBoard(MinecraftServer server, GlobalPos board) {
+        if (!BountyConfig.PER_BOARD_POSTINGS.get()) return current(server);
+        return pick(boardSeed(server.overworld().getSeed(), board), period(server), BountyBoardData.of(server).rerolls(),
+                BountyConfig.OFFERS_SHOWN.get(), BountyConfig.BALANCED_POSTINGS.get(), BountyDefinitions.all(), Set.of());
+    }
+
+    static long boardSeed(long worldSeed, GlobalPos board) {
+        return worldSeed ^ HashCommon.mix(board.pos().asLong() ^ HashCommon.mix((long) board.dimension().location().hashCode()));
+    }
 
     public static List<Offer> current(MinecraftServer server) {
         BountyBoardData board = BountyBoardData.of(server);

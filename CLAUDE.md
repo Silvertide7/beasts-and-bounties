@@ -661,7 +661,7 @@ There is no datagen and no `data` run config.
 - Gametests live in the `gametest` source set (same setup as SilverLib), in `BestiaryGameTests`,
   `TrackingGameTests` and `BountyGameTests` (shipped bounties match entries, deterministic offers,
   accept/abandon rules, kills completing a bounty with rewards and progress, persistence). They cover data loading and merging, milestone maths, attribute reapply,
-  kill credit end to end, the damage/loot/experience hooks (posted as real events), the admin
+  kill credit end to end, bounty board wall placement and support, the damage/loot/experience hooks (posted as real events), the admin
   commands, attachment persistence and `copyOnDeath`, tracking rules, scans and direction maths.
   Package-private helpers (`BestiaryEntries.mergeInPackOrder`, `TrackingScanner.passivePing`) exist
   for them. Rendering is checked in game.
@@ -754,7 +754,7 @@ is only where you look. One bounty is active at a time.
   they are current and otherwise picks with those ids excluded (unless that would leave fewer
   candidates than `offersShown`) and records the result. Weights (`weight` in each bounty file)
   make common creatures show up more and rare ones less. The server sends them when the board opens
-  (`BoardOpened(offers, periodEndsAt, state)`, each offer carrying the kills, item stacks, XP and
+  (`BoardOpened(board, offers, dawnsUntilRefresh, state, refreshOnly)`, each offer carrying the kills, item stacks, XP and
   habitat text the card shows) and recomputes them to validate `AcceptBounty`.
 - **State**: attachment `bounty` = `BountyState(Optional<ActiveBounty(entityId, killsRequired,
   killsSoFar)>, boardPeriod, claimed)`, serialized, `copyOnDeath`; absent = `NONE`. (An old save's
@@ -786,7 +786,7 @@ is only where you look. One bounty is active at a time.
   `allowAbandon` (true), `showLastSeen` (false: when off the server sends no habitat, so the
   posters have no "Last seen:" tooltip), `balancedPostings` (false; on, the first pick is drawn by weight
   from elites and bosses only, the second from normals only, and the rest from everything left, so
-  every board holds one of each; off, every pick is a free weighted roll). Per-creature numbers are data, never config.
+  every board holds one of each; off, every pick is a free weighted roll), `perBoardPostings` (false; on, each board rolls its own postings: `BountyOffers.forBoard` mixes `boardSeed(world seed, GlobalPos)` into the seed, so neighbours differ and a board re-placed in the same spot keeps its postings. It skips `BountyBoardData`'s no-repeat memory, so a board may repeat its last postings. Claims stay per creature across every board and one bounty stays active at a time). Per-creature numbers are data, never config.
 - **Board screen** (`BountyBoardScreen`, opened by the `BoardOpened` handler): background
   `textures/gui/bounty_board.png` (352×188, hand-painted); its usable area is `(19, 21)` 314×145,
   and the screen draws nothing outside it (no drawn title: the texture owns the frame). Postings
@@ -820,7 +820,7 @@ is only where you look. One bounty is active at a time.
   before taking another." A posting the player already claimed on this board stays up with
   "Claimed" (dark green) in place of "Slay N" and no Accept button. The footer otherwise reads "New postings at dawn." /
   "New postings at dawn in 3 days." (the server sends `dawnsUntilRefresh`; real time can't be shown
-  because a modded day's length is unknown). Accept/Abandon send their payload and **the board stays open**: the server
+  because a modded day's length is unknown). Accept/Abandon send their payload, carrying the board's `BlockPos` (with `perBoardPostings` on, the server rolls that board's postings and refuses an accept unless the board is within the player's reach, checked before the block is read so a forged position can't load chunks, and the block there is a bounty board; the refusal says "You're too far from the board."), and **the board stays open**: the server
   answers a successful accept or abandon with a fresh `BoardOpened` flagged `refreshOnly`, and the
   client's handler updates an already-open `BountyBoardScreen` in place (`show`, which re-runs
   `init`); a refresh that arrives after the player closed the board is dropped rather than

@@ -3,6 +3,7 @@ package net.silvertide.beasts_and_bounties.feature.bounty;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Blocks;
@@ -78,6 +79,37 @@ public class BountyGameTests {
     }
 
     @GameTest(template = "empty")
+    public static void perBoardSeedsDifferByPlaceAndHoldInPlace(GameTestHelper helper) {
+        GlobalPos board = GlobalPos.of(Level.OVERWORLD, new BlockPos(100, 64, -40));
+        GlobalPos besideIt = GlobalPos.of(Level.OVERWORLD, new BlockPos(101, 64, -40));
+        GlobalPos sameSpotInTheNether = GlobalPos.of(Level.NETHER, board.pos());
+        helper.assertTrue(BountyOffers.boardSeed(42, board) == BountyOffers.boardSeed(42, GlobalPos.of(Level.OVERWORLD, new BlockPos(100, 64, -40))), "a board in the same spot keeps its seed");
+        List<BountyOffers.Offer> boardOffers = BountyOffers.pick(BountyOffers.boardSeed(42, board), 1, 0, 3, false, BountyDefinitions.all(), Set.of());
+        helper.assertTrue(!creatures(boardOffers).equals(creatures(BountyOffers.pick(BountyOffers.boardSeed(42, besideIt), 1, 0, 3, false, BountyDefinitions.all(), Set.of()))), "a board one block over rolls different postings");
+        helper.assertTrue(!creatures(boardOffers).equals(creatures(BountyOffers.pick(BountyOffers.boardSeed(42, sameSpotInTheNether), 1, 0, 3, false, BountyDefinitions.all(), Set.of()))), "the same spot in another dimension rolls different postings");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    @SuppressWarnings("removal")
+    public static void perBoardAcceptsOnlyAtAReachableBoard(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        BlockPos absoluteBoard = standAtABoard(helper, player);
+        boolean perBoardPostingsBefore = BountyConfig.PER_BOARD_POSTINGS.get();
+        BountyConfig.PER_BOARD_POSTINGS.set(true);
+        try {
+            ResourceLocation offered = BountyOffers.forBoard(player.server, GlobalPos.of(player.level().dimension(), absoluteBoard)).getFirst().entityId();
+            PlayerBounties.accept(player, absoluteBoard.offset(0, 0, 40), offered);
+            helper.assertTrue(PlayerBounties.state(player).active().isEmpty(), "an accept from a spot with no reachable board is refused");
+            PlayerBounties.accept(player, absoluteBoard, offered);
+            helper.assertTrue(PlayerBounties.state(player).active().isPresent(), "an accept at a reachable board takes its posting");
+        } finally {
+            BountyConfig.PER_BOARD_POSTINGS.set(perBoardPostingsBefore);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void offersAreStableWithinAPeriodAndChangeAcrossPeriods(GameTestHelper helper) {
         List<BountyOffers.Offer> first = BountyOffers.pick(42, 1, 0, 3, false, BountyDefinitions.all(), Set.of());
         List<BountyOffers.Offer> again = BountyOffers.pick(42, 1, 0, 3, false, BountyDefinitions.all(), Set.of());
@@ -113,23 +145,24 @@ public class BountyGameTests {
     @SuppressWarnings("removal")
     public static void acceptingValidatesOffersAndActiveBounty(GameTestHelper helper) {
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        List<BountyOffers.Offer> offers = BountyOffers.current(player.server);
+        BlockPos board = standAtABoard(helper, player);
+        List<BountyOffers.Offer> offers = BountyOffers.forBoard(player.server, GlobalPos.of(player.level().dimension(), board));
         ResourceLocation unoffered = BountyDefinitions.all().keySet().stream()
                 .filter(entityId -> offers.stream().noneMatch(offer -> offer.entityId().equals(entityId))).findFirst().orElseThrow();
-        PlayerBounties.accept(player, unoffered);
+        PlayerBounties.accept(player, board, unoffered);
         helper.assertTrue(PlayerBounties.state(player).active().isEmpty(), "an unoffered bounty is refused");
 
         ResourceLocation offered = offers.getFirst().entityId();
-        PlayerBounties.accept(player, offered);
+        PlayerBounties.accept(player, board, offered);
         BountyState.ActiveBounty active = PlayerBounties.state(player).active().orElseThrow();
         helper.assertTrue(active.entityId().equals(offered) && active.killsRequired() == offers.getFirst().definition().kills() && active.killsSoFar() == 0, "accepting an offered bounty starts it");
-        PlayerBounties.accept(player, offers.get(1).entityId());
+        PlayerBounties.accept(player, board, offers.get(1).entityId());
         helper.assertTrue(PlayerBounties.state(player).active().orElseThrow().entityId().equals(offered), "a second bounty is refused while one is active");
 
-        PlayerBounties.abandon(player);
+        PlayerBounties.abandon(player, board);
         BountyState abandoned = PlayerBounties.state(player);
         helper.assertTrue(abandoned.active().isEmpty() && abandoned.claimed().isEmpty(), "abandoning clears the bounty without claiming it");
-        PlayerBounties.accept(player, offered);
+        PlayerBounties.accept(player, board, offered);
         helper.assertTrue(PlayerBounties.state(player).active().isPresent(), "an abandoned posting can be taken again at once");
         helper.succeed();
     }
@@ -218,6 +251,19 @@ public class BountyGameTests {
         helper.assertItemEntityPresent(BountyFeature.BOUNTY_BOARD_ITEM.get(), wallBoardPos, 2);
         helper.assertItemEntityPresent(BountyFeature.BOUNTY_BOARD_ITEM.get(), standingBoardPos, 2);
         helper.succeed();
+    }
+
+    private static BlockPos standAtABoard(GameTestHelper helper, ServerPlayer player) {
+        BlockPos boardPos = new BlockPos(0, 2, 0);
+        helper.setBlock(boardPos.below(), Blocks.STONE);
+        helper.setBlock(boardPos, BountyFeature.BOUNTY_BOARD.get().defaultBlockState());
+        BlockPos absoluteBoard = helper.absolutePos(boardPos);
+        player.moveTo(absoluteBoard.getX() + 1.5, absoluteBoard.getY(), absoluteBoard.getZ() + 0.5);
+        return absoluteBoard;
+    }
+
+    private static Set<ResourceLocation> creatures(List<BountyOffers.Offer> offers) {
+        return offers.stream().map(BountyOffers.Offer::entityId).collect(Collectors.toSet());
     }
 
     private static void killZombie(GameTestHelper helper, ServerPlayer player, DamageSources sources) {

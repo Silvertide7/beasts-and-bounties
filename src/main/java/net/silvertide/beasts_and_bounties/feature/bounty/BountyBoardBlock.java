@@ -92,7 +92,7 @@ public final class BountyBoardBlock extends HorizontalDirectionalBlock {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         boolean hitTheBoard = state.getValue(WALL) || hitResult.getLocation().y - pos.getY() >= BOARD_BOTTOM_PIXELS / 16.0;
         if (!hitTheBoard) return InteractionResult.PASS;
-        if (player instanceof ServerPlayer serverPlayer) PlayerBounties.openBoard(serverPlayer);
+        if (player instanceof ServerPlayer serverPlayer) PlayerBounties.openBoard(serverPlayer, pos);
         return InteractionResult.sidedSuccess(level.isClientSide());
     }
 }

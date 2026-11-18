@@ -671,6 +671,7 @@
   "bounty.beasts_and_bounties.progress": "Bounty: %s of %s slain.",
   "bounty.beasts_and_bounties.abandoned": "Bounty abandoned. The board will have nothing for you for a while.",
   "bounty.beasts_and_bounties.not_offered": "That bounty isn't posted for you.",
+  "bounty.beasts_and_bounties.board_out_of_reach": "You're too far from the board.",
   "bounty.beasts_and_bounties.already_active": "You already hold a bounty.",
   "bounty.beasts_and_bounties.already_claimed": "You've already claimed this bounty. New postings at dawn.",
   "toast.beasts_and_bounties.bounty_claimed": "Bounty Claimed",
