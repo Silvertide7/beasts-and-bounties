@@ -850,7 +850,7 @@ is only where you look. One bounty is active at a time.
   sign scale so the whole thing fits in one block: post 2×8, board 16×8 on top (y 8–16). The
   selection shape is post ∪ board, and **only a click on the board opens the menu**
   (`useWithoutItem` checks the hit's y against the board bottom and passes otherwise); a block's
-  shape can't extend into the block above, which is why the sign had to fit in one. Drops itself; crafted shaped from three paper across
+  shape can't extend into the block above, which is why the sign had to fit in one. Clicking the side of a solid block hangs it on the wall instead (`wall=true`, like vanilla's wall sign but one block with a boolean property): model `block/bounty_board_wall` is just the board, flat against the wall at y 4–12, any click on it opens the menu, and it pops off when the wall behind it stops being solid. The standing board likewise needs a solid block below it, and can't be placed without one. Drops itself; crafted shaped from three paper across
   the top, any sign (`#minecraft:signs`) in the middle and a stick below; Functional Blocks tab.
 
 ## Roadmap

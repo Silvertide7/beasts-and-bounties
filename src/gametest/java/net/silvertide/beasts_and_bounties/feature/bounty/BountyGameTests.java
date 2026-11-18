@@ -1,6 +1,14 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.commands.Commands;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
@@ -182,6 +190,33 @@ public class BountyGameTests {
         ServerPlayer respawned = helper.makeMockServerPlayerInLevel();
         NeoForge.EVENT_BUS.post(new PlayerEvent.Clone(respawned, player, true));
         helper.assertTrue(PlayerBounties.state(respawned).equals(state), "bounty state is copied on death");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void boardHangsOnAWallAndPopsOffWithoutSupport(GameTestHelper helper) {
+        BlockPos wallPos = new BlockPos(2, 2, 0);
+        BlockPos wallBoardPos = new BlockPos(1, 2, 0);
+        BlockPos floorPos = new BlockPos(0, 1, 2);
+        BlockPos standingBoardPos = new BlockPos(0, 2, 2);
+        helper.setBlock(wallPos, Blocks.STONE);
+        helper.setBlock(floorPos, Blocks.STONE);
+
+        BlockPos absoluteWallPos = helper.absolutePos(wallPos);
+        BlockHitResult westFaceOfWall = new BlockHitResult(Vec3.atCenterOf(absoluteWallPos), Direction.WEST, absoluteWallPos, false);
+        BlockPlaceContext placeOnWall = new BlockPlaceContext(helper.makeMockServerPlayerInLevel(), InteractionHand.MAIN_HAND, BountyFeature.BOUNTY_BOARD_ITEM.toStack(), westFaceOfWall);
+        BlockState wallBoard = BountyFeature.BOUNTY_BOARD.get().getStateForPlacement(placeOnWall);
+        helper.assertTrue(wallBoard.getValue(BountyBoardBlock.WALL) && wallBoard.getValue(BountyBoardBlock.FACING) == Direction.WEST, "clicking a wall's side hangs the board facing away from it");
+
+        helper.setBlock(wallBoardPos, wallBoard);
+        helper.setBlock(standingBoardPos, BountyFeature.BOUNTY_BOARD.get().defaultBlockState());
+        helper.setBlock(wallPos, Blocks.AIR);
+        helper.setBlock(floorPos, Blocks.AIR);
+
+        helper.assertBlockNotPresent(BountyFeature.BOUNTY_BOARD.get(), wallBoardPos);
+        helper.assertBlockNotPresent(BountyFeature.BOUNTY_BOARD.get(), standingBoardPos);
+        helper.assertItemEntityPresent(BountyFeature.BOUNTY_BOARD_ITEM.get(), wallBoardPos, 2);
+        helper.assertItemEntityPresent(BountyFeature.BOUNTY_BOARD_ITEM.get(), standingBoardPos, 2);
         helper.succeed();
     }
 

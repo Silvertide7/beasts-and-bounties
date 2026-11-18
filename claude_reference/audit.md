@@ -1,3 +1,41 @@
+# Audit: wall-mounted bounty board (2026-11-18)
+
+Scope: `BountyBoardBlock`, the `bounty_board` blockstate, the new `block/bounty_board_wall` model and
+the CLAUDE.md Block section. Two passes: my own read and an independent reviewer given only the diff
+and the goal. The build passes; nothing has been checked in game yet.
+
+The reviewer found no blocking bugs and checked these against vanilla's standing and wall signs:
+the wall facing and the side it hangs from, the model rotations matching the hitboxes, the support
+check (`isSolid`), boards dropping as an item when they pop off (pistons included), clicking through
+replaceable blocks such as grass, rotate and mirror, and existing worlds loading their old boards as
+`wall=false`.
+
+## Fixed
+
+- [x] **W1. `WALL` was public** but only used inside the block. It is private now.
+- [x] **W2. Bare numbers in the wall hitboxes.** The board's 4 and 12 pixel heights are now
+  `WALL_BOARD_BOTTOM_PIXELS` / `WALL_BOARD_TOP_PIXELS`.
+- [x] **W3. Duplicate standing support check.** `BlockItem.canPlace` already calls `canSurvive`,
+  so `getStateForPlacement` returns the standing state without checking it again.
+- [x] **W4. The back of the wall board was always drawn.** The face against the wall now has
+  `"cullface": "south"`, so it is skipped when the wall hides it.
+- [x] **W5. Import order** (`Blocks` came after `HorizontalDirectionalBlock`).
+
+## Open
+
+- [ ] **W6. No gametest for placement or popping off.** A small test in `BountyGameTests` could
+  place a wall board, remove the block behind it, and check that the board dropped as an item.
+- [ ] **W7. Not waterloggable** (this was already true before the change). Vanilla signs keep the
+  water they're placed in; the board removes it. Add only if wanted.
+
+## Accepted
+
+- **A1. Old standing boards on weak supports.** A board already standing on glass panes, a fence
+  or similar stays put until the block below it changes, then pops off and drops itself. This is
+  how vanilla signs behave too, and nothing is lost.
+
+---
+
 # Audit: pre-release, whole mod (2026-10-17)
 
 Scope: every source file, the gametests, lang, both built-in datapacks, advancements, recipes,
