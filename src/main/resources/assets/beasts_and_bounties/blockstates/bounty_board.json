@@ -1,8 +1,12 @@
 {
   "variants": {
-    "facing=north": { "model": "beasts_and_bounties:block/bounty_board" },
-    "facing=east": { "model": "beasts_and_bounties:block/bounty_board", "y": 90 },
-    "facing=south": { "model": "beasts_and_bounties:block/bounty_board", "y": 180 },
-    "facing=west": { "model": "beasts_and_bounties:block/bounty_board", "y": 270 }
+    "facing=north,wall=false": { "model": "beasts_and_bounties:block/bounty_board" },
+    "facing=east,wall=false": { "model": "beasts_and_bounties:block/bounty_board", "y": 90 },
+    "facing=south,wall=false": { "model": "beasts_and_bounties:block/bounty_board", "y": 180 },
+    "facing=west,wall=false": { "model": "beasts_and_bounties:block/bounty_board", "y": 270 },
+    "facing=north,wall=true": { "model": "beasts_and_bounties:block/bounty_board_wall" },
+    "facing=east,wall=true": { "model": "beasts_and_bounties:block/bounty_board_wall", "y": 90 },
+    "facing=south,wall=true": { "model": "beasts_and_bounties:block/bounty_board_wall", "y": 180 },
+    "facing=west,wall=true": { "model": "beasts_and_bounties:block/bounty_board_wall", "y": 270 }
   }
 }

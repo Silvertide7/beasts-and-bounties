@@ -1,3 +1,50 @@
+# Audit: 1.20.1 Forge port of wall boards and per-board postings (2026-11-18)
+
+Scope: `BountyBoardBlock`, the blockstate and wall model, `perBoardPostings`, the board position on
+the bounty packets, the reach check, and the gametests. Two passes: my own read and an independent
+reviewer given only the diff and the goal. All 33 gametests pass.
+
+The reviewer found no blocking bugs. It checked these and found them correct: the 1.20.1 override
+signatures, the `isSolid()` support check (the same one vanilla signs use), unsupported placement
+being refused, the model matching the hitbox in all four facings, existing worlds loading as
+`wall=false`, packet handlers running on the main thread (`consumerMainThread`), no client class
+leaks, reach being checked before the block is read, and nothing changing with the config off.
+
+## Fixed
+
+- [x] **G1. Accept was stricter about reach than opening the board.** Forge validates block clicks
+  with `canReach(pos, 1.5)`; the accept check used 1.0, so a player knocked back or drifting in water
+  while reading the board could be refused. `BOARD_REACH_LENIENCY` is now 1.5 on this branch (main
+  uses NeoForge's `canInteractWithBlock(pos, 1.0)`, which matches vanilla 1.21 there).
+- [x] **G2. Boards from older versions can pop off.** Old boards could stand on carpet, pressure
+  plates or flower pots and now drop the next time the block under them changes. Added to the
+  changelog.
+- [x] **G3. One drop could satisfy both drop checks.** In `boardHangsOnAWallAndPopsOffWithoutSupport`
+  the two search boxes overlapped. The standing board moved further away and the search range shrank
+  to 1. The same fix is still owed on main.
+
+## Accepted
+
+- **G4. Board-hopping in per-board mode.** Boards are cheap and drop themselves, so a player can
+  place one, read it, break it and move it until they find any creature, the wither and ender dragon
+  included. Since claims are per creature, they could claim almost every bounty in a period, one
+  after another, instead of at most three. That follows the agreed rules, but the config is a strong
+  hint to server owners. Left as is by choice (2026-11-18): per-board postings are opt-in, and server owners decide.
+- **A2. Abandoning shows the postings at whatever position the client sends.** The refresh after
+  abandoning is sent without a board check (fixed that way on main so the screen never goes stale).
+  It costs the player their active bounty and loads no chunks, and G4 already allows browsing.
+- **A3. Wall placement only tries the clicked face** rather than vanilla's looking-direction loop.
+  Clicking through grass or snow gives the same result; other differences are cosmetic.
+- **A4. The per-board gametest toggles the real config value**, which writes the file and wakes the
+  config watcher. The value is cached and restored at once on the server thread; the worst case is a
+  noisy "correcting" log line.
+- **A5. Tests place blocks outside the 1×1×1 `empty` template.** Neighbouring tests are far enough
+  apart that nothing has interfered; a larger template would tidy it up.
+- **A6. "You're too far from the board."** also shows when the board was broken while the screen was
+  open.
+
+---
+
 # Audit: bounty book rows, refmap fix, 1.0.3 (2026-10-21, branch `1-20-1`)
 
 Scope: the uncommitted diff. `BestiaryScreen` shows the active bounty creature's real name and model and lists it before discovery; the tracking mixin config declares its refmap; version 1.0.3 and changelog. Two passes: self-audit, then an independent reviewer given only the diff and the goal. All 30 gametests pass after the fixes, and the built jar ships `beasts_and_bounties.refmap.json` (SRG names) referenced from the mixin config.

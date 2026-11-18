@@ -10,6 +10,7 @@ public final class BountyConfig {
     public static final ForgeConfigSpec.BooleanValue ALLOW_ABANDON;
     private static final ForgeConfigSpec.BooleanValue SHOW_LAST_SEEN;
     static final ForgeConfigSpec.BooleanValue BALANCED_POSTINGS;
+    public static final ForgeConfigSpec.BooleanValue PER_BOARD_POSTINGS;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -24,6 +25,8 @@ public final class BountyConfig {
                 .define("showLastSeen", false);
         BALANCED_POSTINGS = builder.comment("Whether every board holds at least one elite or boss posting and one normal posting, with the rest rolled freely by weight. When false every posting is a free weighted roll.")
                 .define("balancedPostings", false);
+        PER_BOARD_POSTINGS = builder.comment("Whether each board rolls its own postings from where it stands, so two boards side by side offer different creatures. Breaking a board and placing it back in the same spot gives the same postings. A creature claimed on one board counts as claimed on every board, and a player still holds one bounty at a time. When false every board shows the same postings.")
+                .define("perBoardPostings", false);
         builder.pop();
         SPEC = builder.build();
     }

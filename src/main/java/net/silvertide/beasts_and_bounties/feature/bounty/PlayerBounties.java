@@ -1,5 +1,7 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -20,6 +22,7 @@ import java.util.Optional;
 
 public final class PlayerBounties {
     private static final float CLAIMED_VOLUME = 0.6f;
+    private static final double BOARD_REACH_LENIENCY = 1.5;
 
     private static final PlayerData<BountyState> STATE = PlayerDataEvents.register(new PlayerData<>("bounty", BountyState.CODEC));
 
@@ -33,21 +36,30 @@ public final class PlayerBounties {
         STATE.set(player, state);
     }
 
-    static void openBoard(ServerPlayer player) {
-        sendBoard(player, false);
+    static void openBoard(ServerPlayer player, BlockPos board) {
+        sendBoard(player, board, false);
     }
 
-    private static void sendBoard(ServerPlayer player, boolean refreshOnly) {
+    private static List<BountyOffers.Offer> offersAt(ServerPlayer player, BlockPos board) {
+        return BountyOffers.forBoard(player.server, GlobalPos.of(player.level().dimension(), board));
+    }
+
+    private static boolean canUseBoard(ServerPlayer player, BlockPos board) {
+        if (!BountyConfig.PER_BOARD_POSTINGS.get()) return true;
+        return player.canReach(board, BOARD_REACH_LENIENCY) && player.level().getBlockState(board).is(BountyFeature.BOUNTY_BOARD.get());
+    }
+
+    private static void sendBoard(ServerPlayer player, BlockPos board, boolean refreshOnly) {
         BountyState state = state(player).onBoard(BountyOffers.period(player.server));
         List<BountyOffers.Offer> shown = state.active()
                 .map(bounty -> Optional.ofNullable(BountyDefinitions.all().get(bounty.entityId()))
                         .map(definition -> List.of(new BountyOffers.Offer(bounty.entityId(), definition))).orElse(List.of()))
-                .orElseGet(() -> BountyOffers.current(player.server));
+                .orElseGet(() -> offersAt(player, board));
         List<BountyPayloads.Offer> offers = shown.stream()
                 .map(offer -> new BountyPayloads.Offer(offer.entityId(), offer.definition().kills(), offer.definition().itemRewards(),
                         offer.definition().experienceReward(), skillExperienceLines(offer.definition()), lastSeen(offer.entityId())))
                 .toList();
-        Network.sendIfConnected(player, new BountyPayloads.BoardOpened(offers, BountyOffers.dawnsUntilRefresh(player.server), state, refreshOnly));
+        Network.sendIfConnected(player, new BountyPayloads.BoardOpened(board, offers, BountyOffers.dawnsUntilRefresh(player.server), state, refreshOnly));
     }
 
     private static List<Component> skillExperienceLines(BountyDefinition definition) {
@@ -62,14 +74,18 @@ public final class PlayerBounties {
         return BountyConfig.showLastSeen() && entry != null ? entry.fullKnowledge().habitat() : List.of();
     }
 
-    public static void accept(ServerPlayer player, ResourceLocation entityId) {
+    public static void accept(ServerPlayer player, BlockPos board, ResourceLocation entityId) {
         BountyState state = state(player).onBoard(BountyOffers.period(player.server));
         if (!state.canAccept(entityId)) {
             player.displayClientMessage(Component.translatable(state.active().isPresent()
                     ? "bounty.beasts_and_bounties.already_active" : "bounty.beasts_and_bounties.already_claimed"), true);
             return;
         }
-        Optional<BountyOffers.Offer> offer = BountyOffers.current(player.server).stream().filter(candidate -> candidate.entityId().equals(entityId)).findFirst();
+        if (!canUseBoard(player, board)) {
+            player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.board_out_of_reach"), true);
+            return;
+        }
+        Optional<BountyOffers.Offer> offer = offersAt(player, board).stream().filter(candidate -> candidate.entityId().equals(entityId)).findFirst();
         if (offer.isEmpty()) {
             player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.not_offered"), true);
             return;
@@ -77,14 +93,14 @@ public final class PlayerBounties {
         int kills = offer.get().definition().kills();
         store(player, state.accepted(entityId, kills));
         player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.accepted" + (kills == 1 ? ".one" : ""), creatureName(entityId), kills), true);
-        sendBoard(player, true);
+        sendBoard(player, board, true);
     }
 
-    public static void abandon(ServerPlayer player) {
+    public static void abandon(ServerPlayer player, BlockPos board) {
         if (!BountyConfig.ALLOW_ABANDON.get() || state(player).active().isEmpty()) return;
         store(player, state(player).abandoned());
         player.displayClientMessage(Component.translatable("bounty.beasts_and_bounties.abandoned"), true);
-        sendBoard(player, true);
+        sendBoard(player, board, true);
     }
 
     static void recordKill(ServerPlayer player, ResourceLocation entityId) {

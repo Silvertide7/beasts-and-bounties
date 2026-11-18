@@ -1,5 +1,6 @@
 package net.silvertide.beasts_and_bounties.feature.bounty;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -13,8 +14,8 @@ public final class BountyPayloads {
     private BountyPayloads() {}
 
     static void register() {
-        Network.toServer(AcceptBounty.class, AcceptBounty::encode, AcceptBounty::decode, (payload, player) -> PlayerBounties.accept(player, payload.entityId()));
-        Network.toServer(AbandonBounty.class, AbandonBounty::encode, AbandonBounty::decode, (payload, player) -> PlayerBounties.abandon(player));
+        Network.toServer(AcceptBounty.class, AcceptBounty::encode, AcceptBounty::decode, (payload, player) -> PlayerBounties.accept(player, payload.board(), payload.entityId()));
+        Network.toServer(AbandonBounty.class, AbandonBounty::encode, AbandonBounty::decode, (payload, player) -> PlayerBounties.abandon(player, payload.board()));
         Network.toClient(BoardOpened.class, BoardOpened::encode, BoardOpened::decode, payload -> ClientBounties.openBoard(payload));
         Network.toClient(StateSync.class, StateSync::encode, StateSync::decode, payload -> ClientBounties.setState(payload.state()));
         Network.toClient(BountyClaimed.class, BountyClaimed::encode, BountyClaimed::decode, payload -> ClientBounties.claimed(payload.entityId()));
@@ -36,8 +37,9 @@ public final class BountyPayloads {
         }
     }
 
-    public record BoardOpened(List<Offer> offers, int dawnsUntilRefresh, BountyState state, boolean refreshOnly) {
+    public record BoardOpened(BlockPos board, List<Offer> offers, int dawnsUntilRefresh, BountyState state, boolean refreshOnly) {
         void encode(FriendlyByteBuf buf) {
+            buf.writeBlockPos(board);
             buf.writeCollection(offers, (out, offer) -> offer.write(out));
             buf.writeVarInt(dawnsUntilRefresh);
             state.write(buf);
@@ -45,7 +47,7 @@ public final class BountyPayloads {
         }
 
         static BoardOpened decode(FriendlyByteBuf buf) {
-            return new BoardOpened(buf.readList(Offer::read), buf.readVarInt(), BountyState.read(buf), buf.readBoolean());
+            return new BoardOpened(buf.readBlockPos(), buf.readList(Offer::read), buf.readVarInt(), BountyState.read(buf), buf.readBoolean());
         }
     }
 
@@ -69,21 +71,24 @@ public final class BountyPayloads {
         }
     }
 
-    public record AcceptBounty(ResourceLocation entityId) {
+    public record AcceptBounty(BlockPos board, ResourceLocation entityId) {
         void encode(FriendlyByteBuf buf) {
+            buf.writeBlockPos(board);
             buf.writeResourceLocation(entityId);
         }
 
         static AcceptBounty decode(FriendlyByteBuf buf) {
-            return new AcceptBounty(buf.readResourceLocation());
+            return new AcceptBounty(buf.readBlockPos(), buf.readResourceLocation());
         }
     }
 
-    public record AbandonBounty() {
-        void encode(FriendlyByteBuf buf) {}
+    public record AbandonBounty(BlockPos board) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeBlockPos(board);
+        }
 
         static AbandonBounty decode(FriendlyByteBuf buf) {
-            return new AbandonBounty();
+            return new AbandonBounty(buf.readBlockPos());
         }
     }
 }

@@ -681,7 +681,7 @@ There is no datagen and no `data` run config.
   (excluded from the jar, as Player Abilities does), in `BestiaryGameTests`,
   `TrackingGameTests` and `BountyGameTests` (shipped bounties match entries, deterministic offers,
   accept/abandon rules, kills completing a bounty with rewards and progress, persistence). They cover data loading and merging, milestone maths, attribute reapply,
-  kill credit end to end, the damage/loot/experience hooks (posted as real events), the admin
+  kill credit end to end, bounty board wall placement and support, per-board postings, the damage/loot/experience hooks (posted as real events), the admin
   commands, persistence and respawn copying (`ServerPlayer.restoreFrom`), tracking rules, scans and
   direction maths. **Mock players come from `MockPlayers.inLevel(helper)`**, not
   `helper.makeMockServerPlayerInLevel()`: Forge's login path calls `NetworkFilters.injectIfNecessary`,
@@ -781,7 +781,7 @@ is only where you look. One bounty is active at a time.
   they are current and otherwise picks with those ids excluded (unless that would leave fewer
   candidates than `offersShown`) and records the result. Weights (`weight` in each bounty file)
   make common creatures show up more and rare ones less. The server sends them when the board opens
-  (`BoardOpened(offers, dawnsUntilRefresh, state)`, each offer carrying the kills, item stacks, XP and
+  (`BoardOpened(board, offers, dawnsUntilRefresh, state, refreshOnly)`, each offer carrying the kills, item stacks, XP and
   habitat text the card shows) and recomputes them to validate `AcceptBounty`.
 - **State**: `PlayerData` `bounty` = `BountyState(Optional<ActiveBounty(entityId, killsRequired,
   killsSoFar)>, boardPeriod, claimed)`, persisted and copied on respawn; absent = `NONE`. (An old
@@ -813,7 +813,7 @@ is only where you look. One bounty is active at a time.
   `allowAbandon` (true), `showLastSeen` (false: when off the server sends no habitat, so the
   posters have no "Last seen:" tooltip), `balancedPostings` (false; on, the first pick is drawn by weight
   from elites and bosses only, the second from normals only, and the rest from everything left, so
-  every board holds one of each; off, every pick is a free weighted roll). Per-creature numbers are data, never config.
+  every board holds one of each; off, every pick is a free weighted roll), `perBoardPostings` (false; on, each board rolls its own postings: `BountyOffers.forBoard` mixes `boardSeed(world seed, GlobalPos)` into the seed, so neighbours differ and a board re-placed in the same spot keeps its postings. It skips `BountyBoardData`'s no-repeat memory, so a board may repeat its last postings. Claims stay per creature across every board and one bounty stays active at a time). Per-creature numbers are data, never config.
 - **Board screen** (`BountyBoardScreen`, opened by the `BoardOpened` handler): background
   `textures/gui/bounty_board.png` (352×188, hand-painted); its usable area is `(19, 21)` 314×145,
   and the screen draws nothing outside it (no drawn title: the texture owns the frame). Postings
@@ -847,7 +847,7 @@ is only where you look. One bounty is active at a time.
   before taking another." A posting the player already claimed on this board stays up with
   "Claimed" (dark green) in place of "Slay N" and no Accept button. The footer otherwise reads
   "New postings at dawn." / "New postings at dawn in 3 days." (the server sends `dawnsUntilRefresh`;
-  real time can't be shown because a modded day's length is unknown). Accept/Abandon send their payload and **the board stays open**: the server
+  real time can't be shown because a modded day's length is unknown). Accept/Abandon send their payload, carrying the board's `BlockPos` (with `perBoardPostings` on, the server rolls that board's postings and refuses an accept unless the board is within the player's reach, checked with Forge's `canReach` before the block is read so a forged position can't load chunks, and the block there is a bounty board; the refusal says "You're too far from the board."), and **the board stays open**: the server
   answers a successful accept or abandon with a fresh `BoardOpened` flagged `refreshOnly`, and the
   client's handler updates an already-open `BountyBoardScreen` in place (`show`, which re-runs
   `init`); a refresh that arrives after the player closed the board is dropped rather than
@@ -877,7 +877,7 @@ is only where you look. One bounty is active at a time.
   sign scale so the whole thing fits in one block: post 2×8, board 16×8 on top (y 8–16). The
   selection shape is post ∪ board, and **only a click on the board opens the menu**
   (`use` checks the hit's y against the board bottom and passes otherwise); a block's
-  shape can't extend into the block above, which is why the sign had to fit in one. Drops itself; crafted shaped from three paper across
+  shape can't extend into the block above, which is why the sign had to fit in one. Clicking the side of a solid block hangs it on the wall instead (`wall=true`, like vanilla's wall sign but one block with a boolean property): model `block/bounty_board_wall` is just the board, flat against the wall at y 4–12, and any click on it opens the menu. Like vanilla signs, a standing board needs a solid block below and a wall board a solid block behind; it can't be placed without one and pops off (dropping itself) when it goes. Drops itself; crafted shaped from three paper across
   the top, any sign (`#minecraft:signs`) in the middle and a stick below; Functional Blocks tab.
 
 ## Roadmap

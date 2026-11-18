@@ -379,7 +379,7 @@ final class BountyBoardScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         for (Poster poster : posters) {
             if (!isOverButton(mouseX, mouseY, poster)) continue;
-            Network.sendToServer(posterButton(poster) == PosterButton.ABANDON ? new BountyPayloads.AbandonBounty() : new BountyPayloads.AcceptBounty(poster.entityId()));
+            Network.sendToServer(posterButton(poster) == PosterButton.ABANDON ? new BountyPayloads.AbandonBounty(board.board()) : new BountyPayloads.AcceptBounty(board.board(), poster.entityId()));
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
